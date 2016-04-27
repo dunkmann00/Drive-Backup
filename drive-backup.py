@@ -384,7 +384,7 @@ def progress_update(msg):
     print(msg)
 
 def download_progress_update(total_files, total_folders):
-    
+    global PROGRESS_BARS
     frac_bars_cnt = len(PROGRESS_BARS)
     total_width = 20
     total_bars = total_width * (1.0 * file_cnt / total_files)
@@ -395,8 +395,12 @@ def download_progress_update(total_files, total_folders):
                     
     progress_bar_str = u'[{0}{1}{2}]'.format(PROGRESS_BARS[-1]*full_bars,PROGRESS_BARS[frac_bar]*frac_bar_count,PROGRESS_BARS[0]*blank_bars)
     
-    sys.stdout.write(u'\rProgress: {0} Files: {1}/{2} Folders: {3}/{4}'.format(progress_bar_str, file_cnt, total_files, folder_cnt, total_folders))
-    sys.stdout.flush()
+    try:
+        sys.stdout.write(u'\rProgress: {0} Files: {1}/{2} Folders: {3}/{4}'.format(progress_bar_str, file_cnt, total_files, folder_cnt, total_folders))
+        sys.stdout.flush()
+    except:
+        PROGRESS_BARS = (u' ', u'#')
+        download_progress_update(total_files, total_folders)
     
 def main():
     save_destination = get_save_destination()
