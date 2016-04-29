@@ -198,7 +198,7 @@ def get_folder(drive_file_system, parent_dest, drive_folder_object=None, depth=0
     folder_location = os.path.join(parent_dest, drive_folder_object.name)
     
     if sys.platform.startswith('win32'):
-        if len(folder_location) > 260:
+        if len(folder_location) > 260 and not file_destination.startswith('\\\\?\\'):
             folder_location = '\\\\?\\' + folder_location
     
     if not os.path.exists(folder_location):
@@ -247,7 +247,7 @@ def get_file(drive_file, parent_folder):
     file_destination = os.path.join(parent_folder, drive_file_name)
     
     if sys.platform.startswith('win32'):
-        if len(file_destination) > 260:
+        if len(file_destination) > 260 and not file_destination.startswith('\\\\?\\'):
             file_destination = '\\\\?\\' + file_destination
     
     
