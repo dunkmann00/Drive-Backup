@@ -238,8 +238,13 @@ def get_file(drive_file, parent_folder):
         logger = logging.getLogger(__name__)
         logger.critical('Backup destination folder does not exist: %s  Restart backup', parent_folder)
         stop_backup()
-    drive_file_name = re.sub('[^a-z0-9!@#$%^&()[\]+=_ .-]|\.\.', '-', drive_file_name, flags=re.IGNORECASE)
+    drive_file_name = re.sub('[^a-z0-9!@#$%^&()[\]+=_ .-]\.\.\Z', '-', drive_file_name, flags=re.IGNORECASE)
     file_destination = os.path.join(parent_folder, drive_file_name)
+    
+    if sys.platform.startswith('win32'):
+        if len(file_destination) > 260:
+            file_destination = os.path.join('\\\\?\\', file_destination)
+    
     
     if not should_download(drive_file, file_destination):
         return ({'source': 'drive-backup', 'info': 'Already downloaded current version: {0}'.format(drive_file['name'])}, False)
