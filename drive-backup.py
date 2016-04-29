@@ -227,7 +227,7 @@ def get_file(drive_file, parent_folder):
     if re.match('application/vnd\.google-apps\..+', drive_file['mimeType']):
         mimeType_convert = get_mimeType(drive_file['mimeType'])
         if not mimeType_convert:
-            return ({'source': 'drive-backup', 'info': 'File is not a downloadable Google Document: {0}'.format(drive_file['name'])}, False)
+            return ({'source': 'drive-backup', 'info': 'File is not a downloadable Google Document: {0}/{1}'.format(parent_folder, drive_file['name'])}, False)
         request = service.files().export_media(fileId=drive_file['id'],mimeType=mimeType_convert)
         drive_file_name = '{0}.{1}'.format(drive_file['name'], FILE_EXTENSIONS.get(mimeType_convert))
     else:
@@ -238,7 +238,7 @@ def get_file(drive_file, parent_folder):
         logger = logging.getLogger(__name__)
         logger.critical('Backup destination folder does not exist: %s  Restart backup', parent_folder)
         stop_backup()
-    
+    drive_file_name = re.sub('[^a-z0-9!@#$%^&()[\]+=_ .-]|\.\.', '-', drive_file_name, flags=re.IGNORECASE)
     file_destination = os.path.join(parent_folder, drive_file_name)
     
     if not should_download(drive_file, file_destination):
