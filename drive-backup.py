@@ -196,6 +196,11 @@ def get_folder(drive_file_system, parent_dest, drive_folder_object=None, depth=0
         drive_folder_object = drive_file_system.get_root_folder()
         
     folder_location = os.path.join(parent_dest, drive_folder_object.name)
+    
+    if sys.platform.startswith('win32'):
+        if len(folder_location) > 260:
+            folder_location = '\\\\?\\' + folder_location
+    
     if not os.path.exists(folder_location):
         try:
             os.mkdir(folder_location)
