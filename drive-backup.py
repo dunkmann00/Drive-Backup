@@ -148,7 +148,7 @@ def build_dfsmap(source_folder):
     @request_with_backoff
     def get_list():
         return service.files().list(pageSize=1000,
-                                       fields="nextPageToken, files(id, name, mimeType, modifiedTime, parents)",
+                                       fields="nextPageToken, files(id, name, mimeType, modifiedTime, parents, size)",
                                        q=folder_query,
                                        pageToken=next_page_token,
                                        orderBy='folder desc').execute()
@@ -242,9 +242,13 @@ def get_file(drive_file, parent_folder):
     file_destination = os.path.join(parent_folder, drive_file_name)
     
     if not should_download(drive_file, file_destination):
-        return ({'source': 'drive-backup', 'info': 'Already Downloaded Current Version: {0}'.format(drive_file['name'])}, False)
+        return ({'source': 'drive-backup', 'info': 'Already downloaded current version: {0}'.format(drive_file['name'])}, False)
+    
     
     fh = io.FileIO(file_destination, mode='wb')
+    if drive_file.get('size') == '0':
+        fh.close()
+        return ({'source': 'drive-backup', 'info': 'File has no data: {0}'.format(drive_file['name'])}, False)
     downloader = MediaIoBaseDownload(fh, request, chunksize=1024*1024)    
     
     @request_with_backoff
