@@ -243,7 +243,7 @@ def get_file(drive_file, parent_folder):
     
     if sys.platform.startswith('win32'):
         if len(file_destination) > 260:
-            file_destination = os.path.join('\\\\?\\', file_destination)
+            file_destination = '\\\\?\\' + file_destination
     
     
     if not should_download(drive_file, file_destination):
