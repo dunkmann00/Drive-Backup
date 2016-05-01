@@ -14,9 +14,7 @@ import random
 import calendar
 from collections import deque
 import dfsmap
-
 import socket
-import pdb
 
 from apiclient import discovery
 from apiclient import errors
@@ -260,11 +258,7 @@ def get_file(drive_file, parent_folder):
     def download_chunk():
         done = False
         while done is False:
-            try:
-                status, done = downloader.next_chunk()
-            except socket.timeout as e:
-                pdb.set_trace()
-                
+            status, done = downloader.next_chunk()                
         return (status, done)
     
     complete = False
