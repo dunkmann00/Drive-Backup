@@ -15,6 +15,9 @@ import calendar
 from collections import deque
 import dfsmap
 
+import socket
+import pdb
+
 from apiclient import discovery
 from apiclient import errors
 from apiclient.http import MediaIoBaseDownload
@@ -257,7 +260,11 @@ def get_file(drive_file, parent_folder):
     def download_chunk():
         done = False
         while done is False:
-            status, done = downloader.next_chunk()
+            try:
+                status, done = downloader.next_chunk()
+            except socket.timeout as e:
+                pdb.set_trace()
+                
         return (status, done)
     
     complete = False
@@ -278,7 +285,7 @@ def get_file(drive_file, parent_folder):
     return (error, complete)
     
 def add_path(part1, part2):
-    part2 = re.sub('[^a-z0-9!@#$%^&()[\]+=_ .-]|\.\.\Z', '-', part2, flags=re.IGNORECASE)
+    part2 = re.sub('[^a-z0-9!@#$%^&()[\]+=_ .,-]|\.\.\Z', '-', part2, flags=re.IGNORECASE)
     new_path = os.path.join(part1, part2)
     
     if sys.platform.startswith('win32'):
@@ -321,9 +328,9 @@ def handle_error(error):
         else:
             logger.critical(msg)
             stop_backup()
-    elif error['source'] == 'httplib2.HttpLib2Error':
+    elif error['source'] == 'httplib2.HttpLib2Error' or error['source'] == 'socket.error':
         logger.critical(error['info'])
-        stop_backup()
+        stop_backup()        
 
 def request_with_backoff(fn):
     def custom_request(*args, **kwargs):
@@ -340,18 +347,19 @@ def request_with_backoff(fn):
                 returned_args = fn(*args, **kwargs)
                 error = None
                 break
-            except (errors.HttpError) as e:
-                if e.resp.status ==400:
-                    raise e
+            except errors.HttpError as e:
                 error_dict = json.loads(e.content)
                 error = {'source': 'apiclient.errors.HttpError', 'info': error_dict}
                 if e.resp.status == 500 or (e.resp.status == 403 and error_dict['error']['message'] in 'User Rate Limit Exceeded'):
                     retry_num += 1
                 else:
                     break
-            except (httplib2.HttpLib2Error) as e:
+            except httplib2.HttpLib2Error as e:
                 error = {'source': 'httplib2.HttpLib2Error', 'info': str(e)}
                 break
+            except socket.error as e:
+                error = {'source': 'socket.error', 'info': str(e)}
+                retry_num += 1
             
             if retry_num > num_retries:
                 break
@@ -425,7 +433,7 @@ def main():
     progress_update('Getting Credentials')
     credentials = get_credentials()
     progress_update('Verified Credentials')
-    http = credentials.authorize(httplib2.Http())
+    http = credentials.authorize(httplib2.Http(timeout=30))
     global service
     service = discovery.build('drive', 'v3', http=http)
     
