@@ -194,12 +194,8 @@ def get_folder(drive_file_system, parent_dest, drive_folder_object=None, depth=0
     logger = logging.getLogger(__name__)
     if not drive_folder_object:
         drive_folder_object = drive_file_system.get_root_folder()
-        
-    folder_location = os.path.join(parent_dest, drive_folder_object.name)
     
-    if sys.platform.startswith('win32'):
-        if len(folder_location) + folder_location.count('\\') > 260 and not folder_location.startswith('\\\\?\\'):
-            folder_location = '\\\\?\\' + folder_location
+    folder_location = add_path(parent_dest, drive_folder_object.name)
     
     if not os.path.exists(folder_location):
         try:
@@ -243,12 +239,8 @@ def get_file(drive_file, parent_folder):
         logger = logging.getLogger(__name__)
         logger.critical('Backup destination folder does not exist: %s  Restart backup', parent_folder)
         stop_backup()
-    drive_file_name = re.sub('[^a-z0-9!@#$%^&()[\]+=_ .-]|\.\.\Z', '-', drive_file_name, flags=re.IGNORECASE)
-    file_destination = os.path.join(parent_folder, drive_file_name)
     
-    if sys.platform.startswith('win32'):
-        if len(file_destination) + file_destination.count('\\') > 260 and not file_destination.startswith('\\\\?\\'):
-            file_destination = '\\\\?\\' + file_destination
+    file_destination = add_path(parent_folder, drive_file_name)
     
     
     if not should_download(drive_file, file_destination):
@@ -285,6 +277,15 @@ def get_file(drive_file, parent_folder):
     
     return (error, complete)
     
+def add_path(part1, part2):
+    part2 = re.sub('[^a-z0-9!@#$%^&()[\]+=_ .-]|\.\.\Z', '-', part2, flags=re.IGNORECASE)
+    new_path = os.path.join(part1, part2)
+    
+    if sys.platform.startswith('win32'):
+        if len(new_path) + new_path.count('\\') > 260 and not new_path.startswith('\\\\?\\'):
+            new_path = '\\\\?\\' + new_path
+    
+    return new_path
 
 def get_mimeType(google_mimeType):
     new_mimeType = MIME_TYPES.get(google_mimeType)
