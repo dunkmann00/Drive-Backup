@@ -180,7 +180,7 @@ def build_dfsmap(source_folder):
         
             next_page_token = results.get('nextPageToken')
             if next_page_token is None:
-                if query_count > 0:
+                if len(next_folder_query_list) == 1 and len(next_folder_query_list[0]) > 0:
                     query_count = 0
                     next_folder_query_list.append([])
                 folder_query = u" or ".join(next_folder_query_list.popleft())
