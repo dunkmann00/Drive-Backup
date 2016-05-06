@@ -98,43 +98,43 @@ def get_source_folder():
         try:
             results = service.files().list(fields="files(id, name, mimeType)", q="'root' in parents and name='{0}' and trashed=false".format(flags.source)).execute()
         except:
-            logger.critical('Error initiating backup', exc_info=True)
+            logger.critical(u'Error initiating backup', exc_info=True)
             stop_backup()
         items = results.get('files', [])
     else:
         try:
             results = service.files().get(fields="id, name, mimeType", fileId=flags.source_id).execute()
         except:
-            logger.critical('Error initiating backup', exc_info=True)
+            logger.critical(u'Error initiating backup', exc_info=True)
             stop_backup()
         items = [results]
         
     if not items:
-        logger.critical('Source folder not found.')
+        logger.critical(u'Source folder not found.')
     elif len(items) == 1:
         if items[0]['mimeType'] == 'application/vnd.google-apps.folder':
             return items[0]
         else:
             item = items[0]
-            logger.critical('Item found is not a folder: %s', '{0}  {1} ({2})'.format(item['name'], item['mimeType'], item['id']))
+            logger.critical(u'Item found is not a folder: %s', '{0}  {1} ({2})'.format(item['name'], item['mimeType'], item['id']))
     else:
         msg = ''
         for item in items:
             if msg != '':
                 msg += ', '
-            msg += '{0}  {1} ({2})'.format(item['name'], item['mimeType'], item['id'])
-        logger.critical('Multiple items with the same name: %s', msg)
+            msg += u'{0}  {1} ({2})'.format(item['name'], item['mimeType'], item['id'])
+        logger.critical(u'Multiple items with the same name: %s', msg)
     
     return '';
 
 def get_save_destination():
     save_destination = flags.destination if os.path.isabs(flags.destination) else os.path.abspath(flags.destination)
     if flags.backup_name:
-        save_destination = os.path.join(save_destination, flags.backup_name)
+        save_destination = add_path(save_destination, flags.backup_name)
     else:
         current_time = time.localtime()
-        date_string = '{0}-{1}-{2}'.format(current_time.tm_mon, current_time.tm_mday, current_time.tm_year)
-        backup_name = 'Google Drive Backup ' + date_string
+        date_string = u'{0}-{1}-{2}'.format(current_time.tm_mon, current_time.tm_mday, current_time.tm_year)
+        backup_name = u'Google Drive Backup ' + date_string
         save_destination = os.path.join(save_destination, backup_name)
     
     if not os.path.exists(save_destination):
@@ -154,13 +154,13 @@ def build_dfsmap(source_folder):
                                        pageToken=next_page_token,
                                        orderBy='folder desc').execute()
     
-    folder_query = "'{0}' in parents".format(source_folder['id'])
+    folder_query = u"'{0}' in parents".format(source_folder['id'])
         
     next_folder_query_list = deque([[]])
     query_count = 0
     
     while folder_query:
-        folder_query = "({0}) and trashed=false".format(folder_query)
+        folder_query = u"({0}) and trashed=false".format(folder_query)
         next_page_token = None
         while True:
             error, results = get_list()
@@ -183,7 +183,7 @@ def build_dfsmap(source_folder):
                 if query_count > 0:
                     query_count = 0
                     next_folder_query_list.append([])
-                folder_query = " or ".join(next_folder_query_list.popleft())
+                folder_query = u" or ".join(next_folder_query_list.popleft())
                 break
                 
     return drive_file_system
@@ -202,9 +202,9 @@ def get_folder(drive_file_system, parent_dest, drive_folder_object=None, depth=0
         try:
             os.mkdir(folder_location)
         except:
-            logger.critical('Could not create folder: %s', folder_location, exc_info=True)
+            logger.critical(u'Could not create folder: %s', folder_location, exc_info=True)
             stop_backup()
-        logger.info('%s%s Folder Created', '  '*(depth-1), drive_folder_object.name)
+        logger.info(u'%s%s Folder Created', '  '*(depth-1), drive_folder_object.name)
     
     if depth == 0:
         download_progress_update(drive_file_system.get_total_files(), drive_file_system.get_total_folders())
@@ -213,7 +213,10 @@ def get_folder(drive_file_system, parent_dest, drive_folder_object=None, depth=0
     for file in drive_folder_object.files.viewvalues():
         error, success = get_file(file, folder_location)
         if success:
-            logger.info('%s%s created', '  '*depth, file['name'])
+            try:
+                logger.info(u'{0}{1} created'.format(u'  '*depth, file['name']))
+            except UnicodeError:
+                
         else:
             handle_error(error)
         file_cnt += 1
@@ -229,29 +232,29 @@ def get_file(drive_file, parent_folder):
     if re.match('application/vnd\.google-apps\..+', drive_file['mimeType']):
         mimeType_convert = get_mimeType(drive_file['mimeType'])
         if not mimeType_convert:
-            return ({'source': 'drive-backup', 'info': 'File is not a downloadable Google Document: {0}/{1}'.format(parent_folder, drive_file['name'])}, False)
+            return ({'source': 'drive-backup', 'info': u'File is not a downloadable Google Document: {0}/{1}'.format(parent_folder, drive_file['name'])}, False)
         request = service.files().export_media(fileId=drive_file['id'],mimeType=mimeType_convert)
-        drive_file_name = '{0}.{1}'.format(drive_file['name'], FILE_EXTENSIONS.get(mimeType_convert))
+        drive_file_name = u'{0}.{1}'.format(drive_file['name'], FILE_EXTENSIONS.get(mimeType_convert))
     else:
         request = service.files().get_media(fileId=drive_file['id'])
         drive_file_name = drive_file['name']
     
     if not os.path.exists(parent_folder):
         logger = logging.getLogger(__name__)
-        logger.critical('Backup destination folder does not exist: %s  Restart backup', parent_folder)
+        logger.critical(u'Backup destination folder does not exist: %s  Restart backup', parent_folder)
         stop_backup()
     
     file_destination = add_path(parent_folder, drive_file_name)
     
     
     if not should_download(drive_file, file_destination):
-        return ({'source': 'drive-backup', 'info': 'Already downloaded current version: {0}'.format(drive_file['name'])}, False)
+        return ({'source': 'drive-backup', 'info': u'Already downloaded current version: {0}'.format(drive_file['name'])}, False)
     
     
     fh = io.FileIO(file_destination, mode='wb')
     if drive_file.get('size') == '0':
         fh.close()
-        return ({'source': 'drive-backup', 'info': 'File has no data: {0}'.format(drive_file['name'])}, False)
+        return ({'source': 'drive-backup', 'info': u'File has no data: {0}'.format(drive_file['name'])}, False)
     downloader = MediaIoBaseDownload(fh, request, chunksize=1024*1024)    
     
     @request_with_backoff
@@ -279,14 +282,19 @@ def get_file(drive_file, parent_folder):
     return (error, complete)
     
 def add_path(part1, part2):
-    part2 = re.sub('[^a-z0-9!@#$%^&()[\]+=_ .,-]|\.\.\Z', '-', part2, flags=re.IGNORECASE)
+    part2 = re.sub(u'[<>:"/\\\\|?*]|\.\.\Z', '-', part2, flags=re.IGNORECASE)
     new_path = os.path.join(part1, part2)
     
     if sys.platform.startswith('win32'):
         if len(new_path) + new_path.count('\\') > 260 and not new_path.startswith('\\\\?\\'):
-            new_path = '\\\\?\\' + new_path
+            new_path = u'\\\\?\\' + new_path
     
     return new_path
+
+#########################
+#Not sure if this is necessary
+def remove_unicode(str):
+    return re.sub(u'[^a-z0-9!#$%&\'()+,.;=@[\]^_`~-]', '-', str, flags=re.IGNORECASE)
 
 def get_mimeType(google_mimeType):
     new_mimeType = MIME_TYPES.get(google_mimeType)
@@ -306,7 +314,7 @@ def should_download(drive_file, path):
 
 def stop_backup():
     logger = logging.getLogger(__name__)
-    logger.critical('Could not complete backup. Check terminal and/or log file for more info.')
+    logger.critical(u'Could not complete backup. Check terminal and/or log file for more info.')
     sys.exit(1)
 
 def handle_error(error):
@@ -315,7 +323,7 @@ def handle_error(error):
         if not flags.logging_changes or 'Already Downloaded Current Version' not in error['info']:
             logger.info(error['info'])
     elif error['source'] == 'apiclient.errors.HttpError':
-        msg = 'Error {0} - {1} {2}'.format(error['info']['error']['code'], error['info']['error']['message'], error['info'].get('file', ''))
+        msg = u'Error {0} - {1} {2}'.format(error['info']['error']['code'], error['info']['error']['message'], error['info'].get('file', ''))
         non_critical_403s = ['The download quota for this file has been exceeded', 'The user has not granted the app', 'The user does not have sufficient permissions for file']
         if error['info']['error']['code'] == 400 or error['info']['error']['code'] == 404 or (error['info']['error']['code'] == 403 and any(msg in error['info']['error']['message'] for msg in non_critical_403s)):
             logger.error(msg)
@@ -336,7 +344,7 @@ def request_with_backoff(fn):
             if retry_num > 0:
                 time.sleep(random.random() + 2**(retry_num - 1))
                 logger = logging.getLogger(__name__)
-                logger.warning('Retry %d with backoff', retry_num)
+                logger.warning(u'Retry %d with backoff', retry_num)
             try:
                 returned_args = fn(*args, **kwargs)
                 error = None
@@ -366,7 +374,7 @@ def get_user():
         return service.about().get(fields="user").execute()
     except:
         logger = logging.getLogger(__name__)
-        logger.critical('Error Getting User Info', exc_info=True)
+        logger.critical(u'Error Getting User Info', exc_info=True)
         stop_backup()
 
 def setup_logging(log_destination):
@@ -377,7 +385,7 @@ def setup_logging(log_destination):
     file_handler = logging.FileHandler(log_file, mode='w', encoding='utf-8')
     file_handler.setLevel(flags.logging_level)
     
-    name_spacing = '25'
+    name_spacing = u'25'
     if flags.logging_filter:
         filter = logging.Filter(name=__name__)
         file_handler.addFilter(filter)
@@ -386,8 +394,8 @@ def setup_logging(log_destination):
     stream_handler = logging.StreamHandler()
     stream_handler.setLevel('ERROR')
         
-    file_formatter = logging.Formatter('%(asctime)s - %(name)' + name_spacing + 's - %(levelname)8s - %(message)s')
-    stream_formatter = logging.Formatter('\r%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    file_formatter = logging.Formatter(u'%(asctime)s - %(name)' + name_spacing + u's - %(levelname)8s - %(message)s')
+    stream_formatter = logging.Formatter(u'\r%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     
     file_handler.setFormatter(file_formatter)
     stream_handler.setFormatter(stream_formatter)
@@ -424,29 +432,29 @@ def main():
     
     setup_logging(save_destination)
     
-    progress_update('Getting Credentials')
+    progress_update(u'Getting Credentials')
     credentials = get_credentials()
-    progress_update('Verified Credentials')
+    progress_update(u'Verified Credentials')
     http = credentials.authorize(httplib2.Http(timeout=30))
     global service
     service = discovery.build('drive', 'v3', http=http)
     
     user_info = get_user()
-    progress_update('Drive Account: {0} {1}'.format(user_info['user']['displayName'], user_info['user']['emailAddress']))
+    progress_update(u'Drive Account: {0} {1}'.format(user_info['user']['displayName'], user_info['user']['emailAddress']))
     
     source_folder = get_source_folder()
     if not source_folder:
         stop_backup()
-    progress_update('Source Folder: {0}'.format(source_folder['name']))    
+    progress_update(u'Source Folder: {0}'.format(source_folder['name']))    
     
-    progress_update('Backup files to: {0}'.format(save_destination))
+    progress_update(u'Backup files to: {0}'.format(save_destination))
     
     start_time = time.time()
     
-    progress_update('Preparing Backup')
+    progress_update(u'Preparing Backup')
     drive_file_system = build_dfsmap(source_folder)
     
-    progress_update('Starting Backup')
+    progress_update(u'Starting Backup')
     global file_cnt
     global folder_cnt
     file_cnt = 0
@@ -456,12 +464,12 @@ def main():
     end_time = time.time()
     duration = time.gmtime(end_time-start_time)
     if duration.tm_hour > 0:
-        duration_str = time.strftime('%H:%M:%S', duration)
+        duration_str = time.strftime(u'%H:%M:%S', duration)
     else:
-        duration_str = time.strftime('%M:%S', duration)
+        duration_str = time.strftime(u'%M:%S', duration)
     
     print()
-    progress_update('Backup Complete! - Duration: {0}'.format(duration_str))
+    progress_update(u'Backup Complete! - Duration: {0}'.format(duration_str))
 
 
 if __name__ == '__main__':
