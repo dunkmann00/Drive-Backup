@@ -173,7 +173,7 @@ def build_dfsmap(source_folder):
                         query_count = 0
                         next_folder_query_list.append([])
                     drive_file_system.add_folder(object)
-                    next_folder_query_list[len(next_folder_query_list)-1].append("'{0}' in parents".format(object['id']))
+                    next_folder_query_list[len(next_folder_query_list)-1].append(u"'{0}' in parents".format(object['id']))
                     query_count += 1
                 else:
                     drive_file_system.add_file(object)
@@ -213,9 +213,7 @@ def get_folder(drive_file_system, parent_dest, drive_folder_object=None, depth=0
     for file in drive_folder_object.files.viewvalues():
         error, success = get_file(file, folder_location)
         if success:
-            try:
                 logger.info(u'{0}{1} created'.format(u'  '*depth, file['name']))
-            except UnicodeError:
                 
         else:
             handle_error(error)
