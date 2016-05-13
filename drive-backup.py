@@ -15,6 +15,8 @@ from collections import deque
 import dfsmap
 import socket
 
+import pdb
+
 from apiclient import discovery
 from apiclient import errors
 from apiclient.http import MediaIoBaseDownload
@@ -272,7 +274,11 @@ def get_file(drive_file, parent_folder):
     def download_chunk():
         done = False
         while done is False:
-            status, done = downloader.next_chunk()                
+            status, done = downloader.next_chunk()
+            if status.total_size == None:
+                done = True
+                logger.warning(u'{0} : File may not have been fully downloaded.'.format(file_destination))
+                break
         return (status, done)
     
     complete = False
@@ -454,7 +460,7 @@ def main():
     
     print()
     progress_update(u'Backup Complete! - Duration: {0}'.format(duration_str))
-
+    
 
 if __name__ == '__main__':
     main()
