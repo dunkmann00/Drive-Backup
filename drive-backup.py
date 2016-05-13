@@ -217,9 +217,10 @@ def get_folder(drive_file_system, parent_dest, drive_folder_object=None, depth=0
     
     for file in drive_folder_object.files.viewvalues():
         file_location = get_file(file, folder_location)
-        if file_location:
+        if file_location != None:
+            if file_location != '':
                 logger.info(u'{0} : created'.format(file_location))
-                download_errors = 0
+            download_errors = 0
         else:
             download_errors += 1
             if download_errors >= 5:
@@ -240,7 +241,7 @@ def get_file(drive_file, parent_folder):
         mimeType_convert = get_mimeType(drive_file['mimeType'])
         if not mimeType_convert:
             logger.info(u'{0}/{1} : File is not a downloadable Google Document'.format(parent_folder, drive_file['name']))
-            return None
+            return ''
         request = service.files().export_media(fileId=drive_file['id'],mimeType=mimeType_convert)
         drive_file_name = u'{0}.{1}'.format(drive_file['name'], FILE_EXTENSIONS.get(mimeType_convert))
     else:
@@ -257,14 +258,14 @@ def get_file(drive_file, parent_folder):
     if not should_download(drive_file, file_destination):
         if not flags.logging_changes:
             logger.info(u'{0} : Already downloaded current version'.format(file_destination))
-        return None
+        return ''
     
     
     fh = io.FileIO(file_destination, mode='wb')
     if drive_file.get('size') == '0':
         fh.close()
         logger.info(u'{0} : File has no data'.format(file_destination))
-        return None
+        return ''
     downloader = MediaIoBaseDownload(fh, request, chunksize=1024*1024)    
     
     @request_with_backoff
@@ -300,11 +301,6 @@ def add_path(part1, part2):
             new_path = u'\\\\?\\' + new_path
     
     return new_path
-
-#########################
-#Not sure if this is necessary
-def remove_unicode(str):
-    return re.sub(u'[^a-z0-9!#$%&\'()+,.;=@[\]^_`~-]', '-', str, flags=re.IGNORECASE)
 
 def get_mimeType(google_mimeType):
     new_mimeType = MIME_TYPES.get(google_mimeType)
