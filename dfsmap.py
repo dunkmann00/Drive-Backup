@@ -3,7 +3,6 @@ import collections
 class DriveFileSystemMap(object):
     Drive_folder_object = collections.namedtuple('Drive_folder_object',['name', 'files', 'folders'])
     
-    
     def __init__(self, root_folder):
         self._file_system_map = {root_folder['id']: self.Drive_folder_object(root_folder['name'], {}, {})}
         self._total_folders = -1
@@ -76,10 +75,8 @@ class DriveFileSystemMap(object):
     def _count_totals(self, drive_folder_object):
         drive_folder_cnt = 1
         drive_file_cnt = len(drive_folder_object.files)
-        
         for folder in drive_folder_object.folders.viewvalues():
             folder_cnt, file_cnt = self._count_totals(self.get_folder(folder['id']))
             drive_folder_cnt += folder_cnt
             drive_file_cnt += file_cnt
-        
         return (drive_folder_cnt, drive_file_cnt)

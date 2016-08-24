@@ -14,6 +14,8 @@ import calendar
 from collections import deque
 import dfsmap
 import socket
+import cPickle
+import simplejson as json
 
 import pdb
 
@@ -30,6 +32,13 @@ try:
     parser = argparse.ArgumentParser(parents=[tools.argparser])
     parser.add_argument("--destination", help="The destination in the file system where the backup should be stored.", default='')
     parser.add_argument("--backup_name", help="The name of the backup. This will be used as the name of the folder the backup source is stored in. Default is the date.")
+    parser.add_argument("--backup_type", help="The type of backup. 'complete' will create a new backup with all files being backed up again. \
+                                              'update' will go through the previous backup and update the necessary files and folders. \
+                                              'increment' will create a new backup and update the necessary files and folders. \
+                                              Unchanged files from the previous backup will be moved into the new backup and files that have been removed will remain in the previous backup.",
+                                              choices=['complete', 'update', 'increment'], default='complete')
+    parser.add_argument("--prev_backup_name", help="The name of the previous backup. If the previous backup did not have the default name, this can be \
+                                                     used to tell drive backup what it is.")
     parser.add_argument("--source", help="The source folder on Google Drive to backup.")
     parser.add_argument("--source_id", help="The source folder id on Google Drive to backup.", default='root')
     parser.add_argument("--google_doc_mimeType", help="The desired mimeType conversion on all compatible Google Document types.", choices=['msoffice', 'pdf'], default='msoffice')
@@ -129,20 +138,53 @@ def get_source_folder():
     return '';
 
 def get_save_destination():
-    save_destination = flags.destination if os.path.isabs(flags.destination) else os.path.abspath(flags.destination)
+    parent_destination = flags.destination if os.path.isabs(flags.destination) else os.path.abspath(flags.destination)
     if flags.backup_name:
-        save_destination = add_path(save_destination, flags.backup_name)
+        save_destination = add_path(parent_destination, flags.backup_name)
     else:
         current_time = time.localtime()
         date_string = u'{0}-{1}-{2}'.format(current_time.tm_mon, current_time.tm_mday, current_time.tm_year)
         backup_name = u'Google Drive Backup ' + date_string
-        save_destination = os.path.join(save_destination, backup_name)
+        save_destination = os.path.join(parent_destination, backup_name)
     
     if not os.path.exists(save_destination):
-        os.makedirs(save_destination)
+        if flags.backup_type == 'complete' or flags.backup_type == 'increment':
+            os.makedirs(save_destination)
+        elif flags.backup_type == 'update':
+            recent_backup_dir = get_recent_backup(parent_destination)
+            if recent_backup_dir:
+                os.rename(recent_backup_dir, save_destination)
+            else:
+                os.makedirs(save_destination)
     
     return save_destination
 
+"""
+def get_recent_backup(directory):
+    if flags.prev_backup_name:
+        prev_destination = os.path.join(directory, flags.prev_backup_name)
+        if os.path.exists(prev_destination):
+            return prev_destination
+        else:
+            return None
+    else:
+        directory_entries = os.listdir(directory)
+        default_name = re.compile(u'Google Drive Backup ([0-9][0-9]?-[0-9][0-9]?-[0-9][0-9][0-9][0-9])')
+        most_recent_entry = None
+        most_recent_date = None
+        for entry in directory_entries:
+            match = default_name.match(entry)
+            if match:
+                date_string = match.group(1)
+                date = time.strptime(date_string, u"%m-%d-%Y")
+                if most_recent_date == None or date > most_recent_date:
+                    most_recent_date = date
+                    most_recent_entry = entry
+        if most_recent_entry:
+            return os.path.join(directory, most_recent_entry)
+        else:
+            return None
+"""     
 
 def build_dfsmap(source_folder):
     logger = logging.getLogger(__name__)
@@ -216,17 +258,22 @@ def get_folder(drive_file_system, parent_dest, drive_folder_object=None, depth=0
     if depth == 0:
         download_progress_update(drive_file_system.get_total_files(), drive_file_system.get_total_folders())
         
-    
+    current_files = set() #I think I should change this to have a set of what is currently in the directory and remove things from it if they still belong, then go throug and delete whatever is left
     for file in drive_folder_object.files.viewvalues():
-        file_location = get_file(file, folder_location)
+        file_info = get_file(file, folder_location)
         if file_location != None:
-            if file_location != '':
+            should_output, file_location = file_info
+            if should_output:
                 logger.info(u'{0} : created'.format(file_location))
+            
+            if file_location != '':
+                current_files.add(file_location)
+            
             download_errors = 0
         else:
             download_errors += 1
             if download_errors >= 5:
-                logger.critical('Multiple consecutive failed file downloads. Stopping backup, check log for more details.')
+                logger.critical(u'Multiple consecutive failed file downloads. Stopping backup, check log for more details.')
                 stop_backup()
         file_cnt += 1
     
@@ -243,7 +290,7 @@ def get_file(drive_file, parent_folder):
         mimeType_convert = get_mimeType(drive_file['mimeType'])
         if not mimeType_convert:
             logger.info(u'{0}/{1} : File is not a downloadable Google Document'.format(parent_folder, drive_file['name']))
-            return ''
+            return (False, '')
         request = service.files().export_media(fileId=drive_file['id'],mimeType=mimeType_convert)
         drive_file_name = u'{0}.{1}'.format(drive_file['name'], FILE_EXTENSIONS.get(mimeType_convert))
     else:
@@ -260,14 +307,14 @@ def get_file(drive_file, parent_folder):
     if not should_download(drive_file, file_destination):
         if not flags.logging_changes:
             logger.info(u'{0} : Already downloaded current version'.format(file_destination))
-        return ''
+        return (False, file_destination)
     
     
     fh = io.FileIO(file_destination, mode='wb')
     if drive_file.get('size') == '0':
         fh.close()
         logger.info(u'{0} : File has no data'.format(file_destination))
-        return ''
+        return (False, file_destination)
     downloader = MediaIoBaseDownload(fh, request, chunksize=1024*1024)    
     
     @request_with_backoff
@@ -296,7 +343,7 @@ def get_file(drive_file, parent_folder):
         driveFileTimeSecs = calendar.timegm(driveFileTime)
         os.utime(file_destination, (driveFileTimeSecs,driveFileTimeSecs))
     
-    return file_destination if complete else None
+    return (True, file_destination) if complete else None
     
 def add_path(part1, part2):
     part2 = re.sub(u'[<>:"/\\\\|?*]|\.\.\Z', '-', part2, flags=re.IGNORECASE)
@@ -418,6 +465,9 @@ def download_progress_update(total_files, total_folders):
 def main():
     save_destination = get_save_destination()
     
+    print(get_recent_backup(os.path.abspath('')))
+    
+    
     setup_logging(save_destination)
     
     progress_update(u'Getting Credentials')
@@ -442,6 +492,14 @@ def main():
     progress_update(u'Preparing Backup')
     drive_file_system = build_dfsmap(source_folder)
     
+    #print('Size of Drive File System: ' + str(sys.getsizeof(drive_file_system)))
+    
+    with io.open(os.path.join(flags.destination, 'drive_file_system_json.dfs'), mode='wb') as f:
+        #cPickle.dump(drive_file_system, f, cPickle.HIGHEST_PROTOCOL)
+        json.dump(dfsmap.DriveFileSystemMap.get_json_objects(drive_file_system), f)
+    
+    sys.exit(0)
+    
     progress_update(u'Starting Backup')
     global file_cnt
     global folder_cnt
@@ -464,3 +522,25 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+"""
+Ok so not going to do this now but I have decided to again change how I'm going to do this more advanced
+backup with the 3 choices. Stickging with the choices but I'm not going to save the dfsmap because I don't 
+think that really adds any value to figuring out what needs to be updated, removed, etc. This will be the 
+way things will work:
+
+-Update: This will end up being the lone wolf. After searching for the prior backup with either the given prior
+          backup name or the default, rename the directory to the new backup name. Then go through each file and
+          in get_file download new files when necessary. No tweaking required to get_file for this one. After
+          completing a check for a directory remove any files that are no longer in drive.
+          
+-Complete: This will end up being similar to increment. Create a new backup and go through each directory like
+           before. But in get file have it check first if it is in the backup destination (like normal), then 
+           if it is in the previous backup, and if it is, check if it is the current version of the file that is
+           on drive. If it is, there is no need to download it again, just copy it and put it into the backup
+           destination. Otherwise, download the new version from drive.
+           
+-Increment: Everything is the same as complete EXCEPT rather than copying files that are in the previous backup
+            and are the current version, move them. This way the only files and folders that will be left in the 
+            previous backup will be ones that have been changed (either updated or removed) on drive. 
+"""
