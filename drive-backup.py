@@ -198,41 +198,22 @@ def build_dfsmap(source_folder):
                                        pageToken=next_page_token,
                                        orderBy='folder desc').execute()
     
+    folder_query = u"trashed=false"
+    next_page_token = None
+    while True:
+        results = get_list()
+        if not results:
+            logger.error(u'Could not prepare the backup succesfully. Check the log for more details.')
+            results = {}
+        for object in results.get('files', []):
+            if object['mimeType'] == 'application/vnd.google-apps.folder':
+                drive_file_system.add_folder(object)
+            else:
+                drive_file_system.add_file(object)
     
-    folder_query = u"'{0}' in parents".format(source_folder['id'])
-        
-    next_folder_query_list = deque([[]])
-    query_count = 0
-    
-    
-    while folder_query:
-        folder_query = u"({0}) and trashed=false".format(folder_query)
-        next_page_token = None
-        while True:
-            results = get_list()
-            if not results:
-                logger.error(u'Could not prepare the backup succesfully. Check the log for more details.')
-                results = {}
-            for object in results.get('files', []):
-                if object['mimeType'] == 'application/vnd.google-apps.folder':
-                    if query_count >= 200:
-                        query_count = 0
-                        next_folder_query_list.append([])
-                    drive_file_system.add_folder(object)
-                    next_folder_query_list[len(next_folder_query_list)-1].append(u"'{0}' in parents".format(object['id']))
-                    query_count += 1
-                else:
-                    drive_file_system.add_file(object)
-        
-            next_page_token = results.get('nextPageToken')
-            if next_page_token is None:
-                if len(next_folder_query_list) == 1 and len(next_folder_query_list[0]) > 0:
-                    query_count = 0
-                    next_folder_query_list.append([])
-                folder_query = u" or ".join(next_folder_query_list.popleft())
-                break
-    
-    
+        next_page_token = results.get('nextPageToken')
+        if next_page_token is None:
+            break
     
     return drive_file_system
 
