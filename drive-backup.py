@@ -154,9 +154,11 @@ def get_save_destination():
         elif flags.backup_type == 'update':
             if recent_backup_destination:
                 os.rename(recent_backup_destination, save_destination)
-                recent_backup_destination = None
             else:
                 os.makedirs(save_destination)
+    
+    if flags.backup_type == 'update':
+        recent_backup_destination = None
     
     return (save_destination, recent_backup_destination)
 
@@ -242,8 +244,13 @@ def get_folder(drive_file_system, parent_dest, prev_parent_dest=None, drive_fold
     
     if depth == 0:
         download_progress_update(drive_file_system.get_total_files(), drive_file_system.get_total_folders())
-        
+    
+    file_names = set()
     for file in drive_folder_object.files.viewvalues():
+        if file['name'] in file_names:
+            file['name'] = change_name(file['name'])
+        file_names.add(file['name'])
+        
         file_location = get_file(file, folder_location, prev_folder_location)
         if file_location:
             logger.info(u'{0} : created'.format(file_location))
@@ -256,10 +263,18 @@ def get_folder(drive_file_system, parent_dest, prev_parent_dest=None, drive_fold
                     stop_backup()
         file_cnt += 1
     
+    file_names = None
+    
     folder_cnt += 1
     download_progress_update(drive_file_system.get_total_files(), drive_file_system.get_total_folders())
     
+    folder_names = set()
     for folder in drive_folder_object.folders.viewvalues():
+        if folder['name'] in folder_names:
+           folder['name'] = change_name(folder['name'])
+           drive_file_system.set_folder_name(folder['id'], folder['name'])
+        folder_names.add(folder['name'])
+        
         child_folder_object = drive_file_system.get_folder(folder['id'])
         get_folder(drive_file_system, folder_location, prev_parent_dest=prev_folder_location, drive_folder_object=child_folder_object, depth=depth+1)
 
@@ -341,6 +356,20 @@ def add_path(part1, part2):
     
     return new_path
 
+def change_name(item_name):
+    components = re.match(u'([^.]*)(\..*)?$', item_name)
+    if not components:
+        return item_name
+    name = components.group(1)
+    extension = components.group(2) if components.group(2) else ''
+    duplicates = re.match(u'(.*)( \(([0-9])\))$', name)
+    if duplicates:
+        name = duplicates.group(1)
+        duplicate_count = int(duplicates.group(3)) + 1
+    else:
+        duplicate_count = 1
+    return '{0} ({1}){2}'.format(name, duplicate_count, extension)
+
 def get_mimeType(google_mimeType):
     new_mimeType = MIME_TYPES.get(google_mimeType)
     if new_mimeType and flags.google_doc_mimeType == 'pdf' and google_mimeType != 'application/vnd.google-apps.script':
@@ -385,6 +414,7 @@ def clean_incremental_backup(save_destination, prev_save_destination):
     return keep_directory
     
 def clean_updated_backup(drive_file_system, save_destination, drive_folder_object=None):
+    logger = logging.getLogger(__name__)
     if not drive_folder_object:
         drive_folder_object = drive_file_system.get_root_folder()
     
@@ -401,20 +431,24 @@ def clean_updated_backup(drive_file_system, save_destination, drive_folder_objec
         else:
             drive_file_name = file['name']
         
+        drive_file_name = add_path('',drive_file_name)
+        
         if drive_file_name in current_directory:
             current_directory.remove(drive_file_name)
-    
-    
+        
     for folder in drive_folder_object.folders.viewvalues():
-        if folder['name'] in current_directory:
-            current_directory.remove(folder['name'])
+        local_folder = add_path('', folder['name'])
+        if local_folder in current_directory:
+            current_directory.remove(local_folder)
     
     for item in current_directory:
         item_destination = add_path(folder_location, item)
         if os.path.isfile(item_destination):
             os.remove(item_destination)
+            logger.info(u'{0} : Removed File'.format(item_destination))
         else:
             shutil.rmtree(item_destination)
+            logger.info(u'{0} : Removed Folder'.format(item_destination))
     
     current_directory = None
     

@@ -46,6 +46,11 @@ class DriveFileSystemMap(object):
     def get_folder(self, folder_id):
         return self._file_system_map.get(folder_id)
     
+    def set_folder_name(self, folder_id, new_name):
+        folder = self._file_system_map.get(folder_id)
+        new_folder = folder._replace(name=new_name)
+        self._file_system_map[folder_id] = new_folder
+    
     def get_root_folder(self):
         return self._file_system_map.get(self.root_folder_id)
     
