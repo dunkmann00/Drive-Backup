@@ -3,3 +3,5 @@
 !.gitignore
 !drivebackup.py
 !dfsmap.py
+!LICENSE
+!README.md
