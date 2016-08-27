@@ -1,6 +1,5 @@
 *
 
 !.gitignore
-!drive-backup.py
 !drivebackup.py
 !dfsmap.py
