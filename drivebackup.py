@@ -13,7 +13,6 @@ import random
 import calendar
 from collections import deque
 import dfsmap
-import socket
 import shutil
 
 from apiclient import discovery
@@ -28,19 +27,18 @@ try:
     import argparse
     parser = argparse.ArgumentParser(parents=[tools.argparser])
     parser.add_argument("--destination", help="The destination in the file system where the backup should be stored.", default='')
-    parser.add_argument("--backup_name", help="The name of the backup. This will be used as the name of the folder the backup source is stored in. Default is the date.")
-    parser.add_argument("--backup_type", help="The type of backup. 'complete' will create a new backup with all files being backed up again. \
-                                              'update' will go through the previous backup and update the necessary files and folders. \
-                                              'increment' will create a new backup and update the necessary files and folders. \
-                                              Unchanged files from the previous backup will be moved into the new backup and files that have been removed will remain in the previous backup.",
+    parser.add_argument("--backup_name", help="The name of the backup. This will be used as the name of the folder the backup source is stored in. Default is 'Google Drive Backup' followed by the date.")
+    parser.add_argument("--backup_type", help="The type of backup. 'complete' will create a new backup, leaving the previous backup untouched. \
+                                              'update' will update the previous backup to have the current files and folders from your Google Drive. \
+                                              'increment' creates a new backup, moving files that have not changed since the previous backup into the new backup, and leaving only old files remaining in the previous backup.",
                                               choices=['complete', 'update', 'increment'], default='complete')
     parser.add_argument("--prev_backup_name", help="The name of the previous backup. If the previous backup did not have the default name, this can be \
-                                                     used to tell drive backup what it is.")
+                                                     used to tell drive backup what it is. If left blank, Drive Backup will look for the default name from backup_name with the most recent date.")
     parser.add_argument("--source", help="The source folder on Google Drive to backup.")
     parser.add_argument("--source_id", help="The source folder id on Google Drive to backup.", default='root')
     parser.add_argument("--google_doc_mimeType", help="The desired mimeType conversion on all compatible Google Document types.", choices=['msoffice', 'pdf'], default='msoffice')
     parser.add_argument("--logging_filter", help="When this flag is present only messages generated from Google Drive Backup will be logged, not other libraries.", action='store_true')
-    parser.add_argument("--logging_changes", help="When this flag is present only log files that need to be downloaded.", action='store_true')
+    parser.add_argument("--logging_changes", help="When this flag is present, only log files that need to be downloaded.", action='store_true')
     flags = parser.parse_args()
 except ImportError:
     flags = None
