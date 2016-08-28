@@ -16,8 +16,6 @@ import dfsmap
 import socket
 import shutil
 
-import pdb
-
 from apiclient import discovery
 from apiclient import errors
 from apiclient.http import MediaIoBaseDownload
