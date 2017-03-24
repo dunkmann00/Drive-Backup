@@ -20,7 +20,7 @@ If you need to backup your Google Drive this is exactly the tool for you. This s
 
 ## Before you get started
 
-In order to use Drive Backup you'll need to install the Google Drive Python Client library and add a `client_secret.json` file to the same directory as Drive Backup. But fear not! This is very simple and takes only a minute. Check out the [Python Quickstart](https://developers.google.com/drive/v3/web/quickstart/python) page on Google and follow steps #1 and #2. Once that's complete you're ready to rock-n-roll.
+In order to use Drive Backup you'll need to install the Google Drive Python Client library and add a `client_secret.json` file to the same directory as Drive Backup. But fear not! This is very simple and only takes a minute. Check out the [Python Quickstart](https://developers.google.com/drive/v3/web/quickstart/python) page on Google and follow steps #1 and #2. Once that's complete you're ready to rock-n-roll.
 
 ## Example Backup
 
@@ -33,7 +33,7 @@ $ python drivebackup.py --logging_level INFO --logging_filter --destination "My 
  - It is also worth noting that even though this was the first time running a backup we didn't have to do `--backup_type complete`. We could have done an incremental backup or updated backup and Drive Backup would run as expected.
 
 
- In our example, we also set `--logging_filter`. This blocks other libraries from logging messages to the log file. This can be useful when you want to see all the files that Drive Backup processed, but don't want to see all of the requests the Google Drive API made when downloading the files. There are a few other preferences you can set when running your backup. Just type `python drivebackup.py -h` to view all the available options!
+ In our example, we also set `--logging_filter`. This blocks other libraries from logging messages to the log file. This can be useful when you want to see all the files that Drive Backup processed, but don't want to see all of the requests the Google Drive API made when downloading the files. There are a few other preferences you can set when running your backup. Type `python drivebackup.py -h` to view all the available options!
 
 ## Copyright and License
 
