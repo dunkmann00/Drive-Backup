@@ -343,11 +343,11 @@ def get_file(drive_file, parent_folder, old_parent_folder=None):
     return file_destination if complete else None
 
 def add_path(part1, part2):
-    part2 = re.sub(u'[<>:"/\\\\|?*]|\.\.\Z', '-', part2, flags=re.IGNORECASE)
+    part2 = re.sub(u'[<>:"/\\\\|?*]|\.\.\Z', '-', part2, flags=re.IGNORECASE).strip()
     new_path = os.path.join(part1, part2)
 
     if sys.platform.startswith('win32'):
-        if len(new_path) + new_path.count('\\') > 260 and not new_path.startswith('\\\\?\\'):
+        if len(new_path) + new_path.count('\\') > 248 and not new_path.startswith('\\\\?\\'):
             new_path = u'\\\\?\\' + new_path
 
     return new_path
