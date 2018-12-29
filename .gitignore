@@ -4,4 +4,6 @@
 !drivebackup.py
 !dfsmap.py
 !LICENSE
+!Pipfile
+!Pipfile.lock
 !README.md
