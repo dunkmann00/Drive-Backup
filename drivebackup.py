@@ -13,11 +13,12 @@ import calendar
 from collections import deque
 import dfsmap
 import shutil
+import json
+import zroya
 
 from apiclient import discovery
 from apiclient import errors
 from apiclient.http import MediaIoBaseDownload
-#import oauth2client
 from oauth2client import file
 from oauth2client import client
 from oauth2client import tools
@@ -49,7 +50,7 @@ SCOPES = 'https://www.googleapis.com/auth/drive.readonly'
 CLIENT_SECRET_FILE = 'credentials.json'
 APPLICATION_NAME = 'Drive Backup'
 
-PROGRESS_BARS = (' ', '▏', '▎', '▍', '▌', '▋', '▊', '▉', '█')
+PROGRESS_BARS = (' ', '▌', '█')
 
 MIME_TYPES = {
     'application/vnd.google-apps.document': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -191,18 +192,13 @@ def build_dfsmap(source_folder):
     logger = logging.getLogger(__name__)
     drive_file_system = dfsmap.DriveFileSystemMap(source_folder)
 
-    @request_with_backoff
-    def get_list():
-        return service.files().list(pageSize=1000,
-                                       fields="nextPageToken, files(id, name, mimeType, modifiedTime, parents, size)",
-                                       q=folder_query,
-                                       pageToken=next_page_token,
-                                       orderBy='folder desc').execute()
-
-    folder_query = u"trashed=false"
     next_page_token = None
     while True:
-        results = get_list()
+        results = service.files().list(pageSize=1000,
+                                       fields="nextPageToken, files(id, name, mimeType, modifiedTime, parents, size)",
+                                       q=u"trashed=false",
+                                       pageToken=next_page_token,
+                                       orderBy='folder desc').execute(num_retries=5)
         if not results:
             logger.error('Could not prepare the backup succesfully. Check the log for more details.')
             results = {}
@@ -286,7 +282,7 @@ def get_file(drive_file, parent_folder, old_parent_folder=None):
         request = service.files().export_media(fileId=drive_file['id'],mimeType=mimeType_convert)
         drive_file_name = f"{drive_file['name']}.{FILE_EXTENSIONS.get(mimeType_convert)}"
     else:
-        request = service.files().get_media(fileId=drive_file['id']) #if add the parameter 'acknowledgeAbuse=True' files deemed potential malware will be downloaded, should prompt user about this
+        request = service.files().get_media(fileId=drive_file['id'])
         drive_file_name = drive_file['name']
 
     if not os.path.exists(parent_folder):
@@ -314,28 +310,39 @@ def get_file(drive_file, parent_folder, old_parent_folder=None):
         fh.close()
         logger.info(f'{file_destination} : File has no data')
         return ''
-    downloader = MediaIoBaseDownload(fh, request, chunksize=1024*1024)
 
-    @request_with_backoff
-    def download_chunk():
-        done = False
-        while done is False:
-            status, done = downloader.next_chunk()
+    downloader = MediaIoBaseDownload(fh, request, chunksize=1024*1024)
+    complete = False
+
+
+    while complete is False:
+        try:
+            status, complete = downloader.next_chunk(num_retries=5)
             if status.total_size == None:
-                done = True
+                complete = True
                 logger.warning(f'{file_destination} : File may not have been fully downloaded.')
                 break
-        return (status, done)
+        except errors.HttpError as e:
+            if is_abusive_file_error(e.content):
+                print('\r                                                                 ')
+                print('Problem downloading:')
+                print(f"'{drive_file_name}' is marked as potential malware or spam. Are you sure you want to download it?")
+                download_abusive_file = input('Download (y/n): ')
+                print()
+                if download_abusive_file == 'y':
+                    request = service.files().get_media(fileId=drive_file['id'], acknowledgeAbuse=True)
+                    downloader = MediaIoBaseDownload(fh, request, chunksize=1024*1024)
+                else:
+                    break
+            else:
+                logger.exception('Could not complete request due to error.')
+                break
 
-    complete = False
-    result = download_chunk()
+
     fh.close()
-    if result:
-        status, complete = result
-    else:
-        logger.error(f'{file_destination} : Was not downloaded due to an error. Check the log for more details.')
 
     if not complete:
+        logger.error(f'{file_destination} : Was not downloaded due to an error. Check the log for more details.')
         os.remove(file_destination)
     else:
         driveFileTime = time.strptime(drive_file['modifiedTime'], '%Y-%m-%dT%H:%M:%S.%fZ')
@@ -383,6 +390,14 @@ def should_download(drive_file, path):
         return True
     else:
         return False
+
+def is_abusive_file_error(content):
+    try:
+        data = json.loads(content.decode('utf-8'))
+        return data['error']['errors'][0]['reason'] == 'cannotDownloadAbusiveFile'
+    except:
+        return False
+
 
 def clean_backup(drive_file_system, save_destination, prev_save_destination=None):
     if flags.backup_type == 'increment' and prev_save_destination:
@@ -458,28 +473,8 @@ def clean_updated_backup(drive_file_system, save_destination, drive_folder_objec
 def stop_backup():
     logger = logging.getLogger(__name__)
     logger.critical('Could not complete backup. Check terminal and/or log file for more info.')
+    logging.shutdown()
     sys.exit(1)
-
-def request_with_backoff(fn):
-    logger = logging.getLogger(__name__)
-    def custom_request(*args, **kwargs):
-        num_retries = 5
-        retry_num = 0
-        returned_args = None
-        while True:
-            if retry_num > 0:
-                time.sleep(random.random() + 2**(retry_num - 1))
-                logger.warning('Retry %d with backoff', retry_num)
-            try:
-                returned_args = fn(*args, **kwargs)
-                return returned_args
-            except:
-                retry_num += 1
-                if retry_num > num_retries:
-                    logger.exception('Could not complete request due to error.')
-                    return None
-
-    return custom_request
 
 def get_user():
     try:
@@ -597,6 +592,15 @@ def main():
 
     print()
     progress_update(f'Backup Complete! - Duration: {duration_str}')
+    logging.shutdown()
+
+    if sys.platform.startswith('win32'):
+        zroya.init(APPLICATION_NAME, "GWaters", "Drive-Backup", "Backup", "1.0")
+        template = zroya.Template(zroya.TemplateType.Text2)
+        template.setFirstLine(APPLICATION_NAME)
+        template.setSecondLine("Drive Backup is complete!")
+        zroya.show(template)
+
 
 if __name__ == '__main__':
     main()
