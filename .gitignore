@@ -3,6 +3,7 @@
 !.gitignore
 !drivebackup.py
 !dfsmap.py
+!drive-backup-icon.png
 !LICENSE
 !Pipfile
 !Pipfile.lock

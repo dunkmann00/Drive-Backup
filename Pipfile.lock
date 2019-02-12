@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "3920866da4b7844d62b6fd58fd58e074b2a2a7747cc2880176593d062bd2b036"
+            "sha256": "c5be727dc6538c1f2b7cc54d73672e69255859f97a9cdec834a53b940946499f"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -73,6 +73,21 @@
             ],
             "version": "==0.2.4"
         },
+        "pync": {
+            "hashes": [
+                "sha256:38b9e61735a3161f9211a5773c5f5ea698f36af4ff7f77fa03e8d1ff0caa117f"
+            ],
+            "index": "pypi",
+            "markers": "sys_platform == 'darwin'",
+            "version": "==2.0.3"
+        },
+        "python-dateutil": {
+            "hashes": [
+                "sha256:7e6584c74aeed623791615e26efd690f29817a27c73085b78e4bad02493df2fb",
+                "sha256:c89805f6f4d64db21ed966fda138f8a5ed7a4fdbc1a8ee329ce1b74e3c74da9e"
+            ],
+            "version": "==2.8.0"
+        },
         "rsa": {
             "hashes": [
                 "sha256:14ba45700ff1ec9eeb206a2ce76b32814958a98e372006c8fb76ba820211be66",
@@ -101,6 +116,7 @@
                 "sha256:f972adebfda76b5558576996974939277e38f7b7966933782a9798e0d8b2ad29"
             ],
             "index": "pypi",
+            "markers": "sys_platform == 'win32'",
             "version": "==0.2.4"
         }
     },

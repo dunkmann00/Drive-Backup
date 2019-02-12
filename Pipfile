@@ -8,7 +8,8 @@ verify_ssl = true
 [packages]
 google-api-python-client = "*"
 oauth2client = "*"
-zroya = "*"
+zroya = {version = "*", sys_platform = "== 'win32'"}
+pync = {version = "*", sys_platform = "== 'darwin'"}
 
 [requires]
 python_version = "3"

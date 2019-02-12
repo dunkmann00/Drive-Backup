@@ -14,7 +14,6 @@ from collections import deque
 import dfsmap
 import shutil
 import json
-import zroya
 
 from apiclient import discovery
 from apiclient import errors
@@ -51,6 +50,10 @@ CLIENT_SECRET_FILE = 'credentials.json'
 APPLICATION_NAME = 'Drive Backup'
 
 PROGRESS_BARS = (' ', '▌', '█')
+
+drive_file_system = None
+file_cnt = 0
+folder_cnt = 0
 
 MIME_TYPES = {
     'application/vnd.google-apps.document': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -215,7 +218,7 @@ def build_dfsmap(source_folder):
     return drive_file_system
 
 
-def get_folder(drive_file_system, parent_dest, prev_parent_dest=None, drive_folder_object=None, depth=0):
+def get_folder(parent_dest, prev_parent_dest=None, drive_folder_object=None):
     global file_cnt
     global folder_cnt
     global download_errors
@@ -236,8 +239,6 @@ def get_folder(drive_file_system, parent_dest, prev_parent_dest=None, drive_fold
             stop_backup()
         logger.info(f'{folder_location} : Folder Created')
 
-    if depth == 0:
-        download_progress_update(drive_file_system.get_total_files(), drive_file_system.get_total_folders())
 
     file_names = set()
     for file in drive_folder_object.files.values():
@@ -260,7 +261,7 @@ def get_folder(drive_file_system, parent_dest, prev_parent_dest=None, drive_fold
     file_names = None
 
     folder_cnt += 1
-    download_progress_update(drive_file_system.get_total_files(), drive_file_system.get_total_folders())
+    download_progress_update()
 
     folder_names = set()
     for folder in drive_folder_object.folders.values():
@@ -270,7 +271,7 @@ def get_folder(drive_file_system, parent_dest, prev_parent_dest=None, drive_fold
         folder_names.add(folder['name'])
 
         child_folder_object = drive_file_system.get_folder(folder['id'])
-        get_folder(drive_file_system, folder_location, prev_parent_dest=prev_folder_location, drive_folder_object=child_folder_object, depth=depth+1)
+        get_folder(folder_location, prev_parent_dest=prev_folder_location, drive_folder_object=child_folder_object)
 
 def get_file(drive_file, parent_folder, old_parent_folder=None):
     logger = logging.getLogger(__name__)
@@ -334,6 +335,7 @@ def get_file(drive_file, parent_folder, old_parent_folder=None):
                     downloader = MediaIoBaseDownload(fh, request, chunksize=1024*1024)
                 else:
                     break
+                download_progress_update()
             else:
                 logger.exception('Could not complete request due to error.')
                 break
@@ -399,11 +401,11 @@ def is_abusive_file_error(content):
         return False
 
 
-def clean_backup(drive_file_system, save_destination, prev_save_destination=None):
+def clean_backup(save_destination, prev_save_destination=None):
     if flags.backup_type == 'increment' and prev_save_destination:
         clean_incremental_backup(save_destination, prev_save_destination)
     elif flags.backup_type == 'update':
-        clean_updated_backup(drive_file_system, save_destination)
+        clean_updated_backup(save_destination)
 
 
 def clean_incremental_backup(save_destination, prev_save_destination):
@@ -426,7 +428,7 @@ def clean_incremental_backup(save_destination, prev_save_destination):
 
     return keep_directory
 
-def clean_updated_backup(drive_file_system, save_destination, drive_folder_object=None):
+def clean_updated_backup(save_destination, drive_folder_object=None):
     logger = logging.getLogger(__name__)
     if not drive_folder_object:
         drive_folder_object = drive_file_system.get_root_folder()
@@ -467,7 +469,7 @@ def clean_updated_backup(drive_file_system, save_destination, drive_folder_objec
 
     for folder in drive_folder_object.folders.values():
         child_folder_object = drive_file_system.get_folder(folder['id'])
-        clean_updated_backup(drive_file_system, folder_location, child_folder_object)
+        clean_updated_backup(folder_location, child_folder_object)
 
 
 def stop_backup():
@@ -522,8 +524,10 @@ def progress_update(msg):
     logger.info(msg)
     print(msg)
 
-def download_progress_update(total_files, total_folders):
+def download_progress_update():
     global PROGRESS_BARS
+    total_files = drive_file_system.get_total_files()
+    total_folders = drive_file_system.get_total_folders()
     frac_bars_cnt = len(PROGRESS_BARS)
     total_width = 20
     total_bars = total_width * (1.0 * file_cnt / total_files)
@@ -538,7 +542,7 @@ def download_progress_update(total_files, total_folders):
         print(f'\rProgress: {progress_bar_str} Files: {file_cnt}/{total_files} Folders: {folder_cnt}/{total_folders}', end='')
     except:
         PROGRESS_BARS = ('-', '=')
-        download_progress_update(total_files, total_folders)
+        download_progress_update()
 
 def main():
     save_destination, recent_backup_destination = get_save_destination()
@@ -567,21 +571,18 @@ def main():
     start_time = time.time()
 
     progress_update('Preparing Backup')
+    global drive_file_system
     drive_file_system = build_dfsmap(source_folder)
 
     progress_update('Starting Backup')
-    global file_cnt
-    global folder_cnt
-    global download_errors
-    file_cnt = 0
-    folder_cnt = 0
-    download_errors = 0
-    get_folder(drive_file_system, save_destination, recent_backup_destination)
+    download_progress_update()
+
+    get_folder(save_destination, recent_backup_destination)
 
     if flags.backup_type != 'complete':
         print()
         progress_update('Cleaning Up Backup')
-        clean_backup(drive_file_system, save_destination, recent_backup_destination)
+        clean_backup(save_destination, recent_backup_destination)
 
     end_time = time.time()
     duration = time.gmtime(end_time-start_time)
@@ -595,11 +596,20 @@ def main():
     logging.shutdown()
 
     if sys.platform.startswith('win32'):
+        import zroya
         zroya.init(APPLICATION_NAME, "GWaters", "Drive-Backup", "Backup", "1.0")
-        template = zroya.Template(zroya.TemplateType.Text2)
+        template = zroya.Template(zroya.TemplateType.ImageAndText2)
         template.setFirstLine(APPLICATION_NAME)
         template.setSecondLine("Drive Backup is complete!")
+        template.setImage('drive-backup-icon.png')
         zroya.show(template)
+    elif sys.platform.startswith('darwin'):
+        import pync
+        pync.notify('Drive Backup is complete!',
+                    title=APPLICATION_NAME,
+                    sender='org.python.python',
+                    appIcon='drive-backup-icon.png',
+                    sound='default')
 
 
 if __name__ == '__main__':
