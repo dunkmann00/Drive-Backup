@@ -134,7 +134,7 @@ def get_source_folder():
             msg += f"{item['name']}  {item['mimeType']} ({item['id']})"
         logger.critical(f'Multiple items with the same name: {msg}')
 
-    return '';
+    return ''
 
 def get_save_destination():
     parent_destination = flags.destination if os.path.isabs(flags.destination) else os.path.abspath(flags.destination)
