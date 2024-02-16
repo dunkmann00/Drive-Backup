@@ -15,17 +15,18 @@ import dfsmap
 import shutil
 import json
 
-from apiclient import discovery
-from apiclient import errors
-from apiclient.http import MediaIoBaseDownload
-from oauth2client import file
-from oauth2client import client
-from oauth2client import tools
+from googleapiclient import discovery
+from googleapiclient import errors
+from googleapiclient.http import MediaIoBaseDownload
+
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import InstalledAppFlow
 
 
 try:
     import argparse
-    parser = argparse.ArgumentParser(parents=[tools.argparser])
+    parser = argparse.ArgumentParser()
     parser.add_argument("--destination", help="The destination in the file system where the backup should be stored.", default='')
     parser.add_argument("--backup_name", help="The name of the backup. This will be used as the name of the folder the backup source is stored in. Default is 'Google Drive Backup' followed by the date.")
     parser.add_argument("--backup_type", help="The type of backup. 'complete' will create a new backup, leaving the previous backup untouched. \
@@ -37,6 +38,10 @@ try:
     parser.add_argument("--source", help="The source folder on Google Drive to backup.")
     parser.add_argument("--source_id", help="The source folder id on Google Drive to backup.", default='root')
     parser.add_argument("--google_doc_mimeType", help="The desired mimeType conversion on all compatible Google Document types.", choices=['msoffice', 'pdf'], default='msoffice')
+    parser.add_argument(
+        '--logging_level', default='ERROR',
+        choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
+        help='Set the logging level of detail.')
     parser.add_argument("--logging_filter", help="When this flag is present only messages generated from Google Drive Backup will be logged, not other libraries.", action='store_true')
     parser.add_argument("--logging_changes", help="When this flag is present, only log files that need to be downloaded.", action='store_true')
     flags = parser.parse_args()
@@ -88,17 +93,19 @@ def get_credentials():
     credential_path = os.path.join(credential_dir,
                                    'drive-python-quickstart.json')
 
-    store = file.Storage(credential_path)
-    credentials = store.get()
-    if not credentials or credentials.invalid:
-        flow = client.flow_from_clientsecrets(CLIENT_SECRET_FILE, SCOPES)
-        flow.user_agent = APPLICATION_NAME
-        if flags:
-            credentials = tools.run_flow(flow, store, flags)
-        else: # Needed only for compatibility with Python 2.6
-            credentials = tools.run(flow, store)
+    credentials = None
+    if os.path.exists(credential_path):
+        credentials = Credentials.from_authorized_user_file(credential_path, SCOPES)
+    if not credentials or not credentials.valid:
+        if credentials and credentials.expired and credentials.refresh_token:
+            credentials.refresh(Request())
+        else:
+            flow = InstalledAppFlow.from_client_secrets_file(CLIENT_SECRET_FILE, SCOPES)
+            credentials = flow.run_local_server(port=0)
         logger = logging.getLogger(__name__)
         logger.info(f'Storing credentials to {credential_path}', )
+        with open(credential_path, "w") as token:
+            token.write(credentials.to_json())
     return credentials
 
 def get_source_folder():
@@ -552,9 +559,8 @@ def main():
     progress_update('Getting Credentials')
     credentials = get_credentials()
     progress_update('Verified Credentials')
-    http = credentials.authorize(httplib2.Http(timeout=30))
     global service
-    service = discovery.build('drive', 'v3', http=http)
+    service = discovery.build('drive', 'v3', credentials=credentials)
 
     user_info = get_user()
     progress_update(f"Drive Account: {user_info['user']['displayName']} {user_info['user']['emailAddress']}")
