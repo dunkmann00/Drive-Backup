@@ -1,19 +1,16 @@
 # -*- coding: utf-8 -*-
 
-
-import httplib2
 import os
 import io
 import sys
 import re
 import logging
 import time
-import random
 import calendar
-from collections import deque
 import dfsmap
 import shutil
 import json
+from pathlib import Path
 
 from googleapiclient import discovery
 from googleapiclient import errors
@@ -23,6 +20,18 @@ from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 
+class Config:
+    def __init__(self, args):
+        self.destination = Path(args.get("destination")).absolute()
+        self.backup_name = args.get("backup_name")
+        self.backup_type = args.get("backup_type")
+        self.prev_backup_name = args.get("prev_backup_name")
+        self.source = args.get("source")
+        self.source_id = args.get("source_id")
+        self.google_doc_mimeType = args.get("google_doc_mimeType")
+        self.logging_level = args.get("logging_level")
+        self.logging_filter = args.get("logging_filter")
+        self.logging_changes = args.get("logging_changes")
 
 try:
     import argparse
@@ -45,12 +54,13 @@ try:
     parser.add_argument("--logging_filter", help="When this flag is present only messages generated from Google Drive Backup will be logged, not other libraries.", action='store_true')
     parser.add_argument("--logging_changes", help="When this flag is present, only log files that need to be downloaded.", action='store_true')
     flags = parser.parse_args()
+    config = Config(vars(flags))
 except ImportError:
     flags = None
 
 # If modifying these scopes, delete your previously saved credentials
 # at ~/.credentials/drive-python-quickstart.json
-SCOPES = 'https://www.googleapis.com/auth/drive.readonly'
+SCOPES = ['https://www.googleapis.com/auth/drive.readonly']
 CLIENT_SECRET_FILE = 'credentials.json'
 APPLICATION_NAME = 'Drive Backup'
 
@@ -86,16 +96,14 @@ def get_credentials():
     Returns:
         Credentials, the obtained credential.
     """
-    home_dir = os.path.expanduser('~')
-    credential_dir = os.path.join(home_dir, '.credentials')
-    if not os.path.exists(credential_dir):
-        os.makedirs(credential_dir)
-    credential_path = os.path.join(credential_dir,
-                                   'drive-python-quickstart.json')
+    credential_dir = Path("~/.credentials").expanduser()
+    if not credential_dir.exists():
+        credential_dir.mkdir()
+    credential_path = credential_dir / 'drive-python-quickstart.json'
 
     credentials = None
-    if os.path.exists(credential_path):
-        credentials = Credentials.from_authorized_user_file(credential_path, SCOPES)
+    if credential_path.exists():
+        credentials = Credentials.from_authorized_user_file(str(credential_path), SCOPES)
     if not credentials or not credentials.valid:
         if credentials and credentials.expired and credentials.refresh_token:
             credentials.refresh(Request())
@@ -104,7 +112,7 @@ def get_credentials():
             credentials = flow.run_local_server(port=0)
         logger = logging.getLogger(__name__)
         logger.info(f'Storing credentials to {credential_path}', )
-        with open(credential_path, "w") as token:
+        with credential_path.open("w") as token:
             token.write(credentials.to_json())
     return credentials
 
@@ -144,25 +152,26 @@ def get_source_folder():
     return '';
 
 def get_save_destination():
-    parent_destination = flags.destination if os.path.isabs(flags.destination) else os.path.abspath(flags.destination)
-    if flags.backup_name:
-        backup_name = flags.backup_name
+    parent_destination = config.destination
+    if config.backup_name:
+        backup_name = config.backup_name
     else:
         current_time = time.localtime()
         date_string = f'{current_time.tm_mon}-{current_time.tm_mday}-{current_time.tm_year}'
         backup_name = 'Google Drive Backup ' + date_string
 
-    save_destination = add_path(parent_destination, backup_name)
+    # save_destination = add_path(parent_destination, backup_name)
+    save_destination = parent_destination / backup_name
     recent_backup_destination = get_recent_backup(parent_destination, backup_name)
 
-    if not os.path.exists(save_destination):
-        if flags.backup_type == 'complete' or flags.backup_type == 'increment':
-            os.makedirs(save_destination)
+    if not save_destination.exists():
+        if config.backup_type == 'complete' or config.backup_type == 'increment':
+            save_destination.mkdir(parents=True)
         elif flags.backup_type == 'update':
             if recent_backup_destination:
-                os.rename(recent_backup_destination, save_destination)
+                recent_backup_destination.rename(save_destination)
             else:
-                os.makedirs(save_destination)
+                save_destination.mkdir(parents=True)
 
     if flags.backup_type == 'update':
         recent_backup_destination = None
@@ -171,29 +180,29 @@ def get_save_destination():
 
 
 def get_recent_backup(directory, current_backup):
-    if flags.prev_backup_name:
-        prev_destination = os.path.join(directory, flags.prev_backup_name)
-        if os.path.exists(prev_destination) and prev_destination != current_backup:
+    if config.prev_backup_name:
+        prev_destination = directory / config.prev_backup_name
+        if prev_destination.is_dir() and config.prev_backup_name != current_backup:
             return prev_destination
         else:
             return None
     else:
-        if not os.path.exists(directory):
+        if not directory.exists():
             return None
-        directory_entries = os.listdir(directory)
+        directory_entries = directory.iterdir()
         default_name = re.compile('Google Drive Backup ([0-9][0-9]?-[0-9][0-9]?-[0-9][0-9][0-9][0-9])')
         most_recent_entry = None
         most_recent_date = None
         for entry in directory_entries:
-            match = default_name.match(entry)
+            match = default_name.match(entry.name)
             if match:
                 date_string = match.group(1)
                 date = time.strptime(date_string, u"%m-%d-%Y")
-                if entry != current_backup and (most_recent_date == None or date > most_recent_date):
+                if entry.name != current_backup and (most_recent_date == None or date > most_recent_date):
                     most_recent_date = date
                     most_recent_entry = entry
-        if most_recent_entry:
-            return os.path.join(directory, most_recent_entry)
+        if most_recent_entry is not None:
+            return most_recent_entry
         else:
             return None
 
@@ -233,14 +242,16 @@ def get_folder(parent_dest, prev_parent_dest=None, drive_folder_object=None):
     if not drive_folder_object:
         drive_folder_object = drive_file_system.get_root_folder()
 
-    folder_location = add_path(parent_dest, drive_folder_object.name)
+    # folder_location = add_path(parent_dest, drive_folder_object.name)
+    folder_location = parent_dest / drive_folder_object.name
     prev_folder_location = None
     if prev_parent_dest:
-        prev_folder_location = add_path(prev_parent_dest, drive_folder_object.name)
+        # prev_folder_location = add_path(prev_parent_dest, drive_folder_object.name)
+        prev_folder_location = prev_parent_dest / drive_folder_object.name
 
-    if not os.path.exists(folder_location):
+    if not folder_location.exists():
         try:
-            os.mkdir(folder_location)
+            folder_location.mkdir(parents=True)
         except:
             logger.critical(f'Could not create folder: {folder_location}', exc_info=True)
             stop_backup()
@@ -285,7 +296,7 @@ def get_file(drive_file, parent_folder, old_parent_folder=None):
     if re.match('application/vnd\.google-apps\..+', drive_file['mimeType']):
         mimeType_convert = get_mimeType(drive_file['mimeType'])
         if not mimeType_convert:
-            logger.info(f"{parent_folder}/{drive_file['name']} : File is not a downloadable Google Document")
+            logger.info(f"{parent_folder / drive_file['name']} : File is not a downloadable Google Document")
             return ''
         request = service.files().export_media(fileId=drive_file['id'],mimeType=mimeType_convert)
         drive_file_name = f"{drive_file['name']}.{FILE_EXTENSIONS.get(mimeType_convert)}"
@@ -293,22 +304,24 @@ def get_file(drive_file, parent_folder, old_parent_folder=None):
         request = service.files().get_media(fileId=drive_file['id'])
         drive_file_name = drive_file['name']
 
-    if not os.path.exists(parent_folder):
+    if not parent_folder.exists():
         logger.critical(f'Backup destination folder does not exist: {parent_folder}  Restart backup')
         stop_backup()
 
-    file_destination = add_path(parent_folder, drive_file_name)
+    # file_destination = add_path(parent_folder, drive_file_name)
+    file_destination = parent_folder / drive_file_name
     old_file_destination = None
-    if old_parent_folder and os.path.exists(old_parent_folder):
-        old_file_destination = add_path(old_parent_folder, drive_file_name)
+    if old_parent_folder and old_parent_folder.exists():
+        # old_file_destination = add_path(old_parent_folder, drive_file_name)
+        old_file_destination = old_parent_folder / drive_file_name
 
     if not should_download(drive_file, file_destination) or (old_file_destination and not should_download(drive_file, old_file_destination)):
-        if not flags.logging_changes:
+        if not config.logging_changes:
             logger.info(f'{file_destination} : Already downloaded current version')
-        if old_file_destination and os.path.exists(old_file_destination): #need the extra check to ensure no errors in the event of duplicate files with same name
-            if flags.backup_type == 'complete':
+        if old_file_destination and old_file_destination.exists(): #need the extra check to ensure no errors in the event of duplicate files with same name
+            if config.backup_type == 'complete':
                 shutil.copy2(old_file_destination, file_destination)
-            elif flags.backup_type == 'increment':
+            elif config.backup_type == 'increment':
                 shutil.move(old_file_destination, file_destination)
         return ''
 
@@ -352,7 +365,7 @@ def get_file(drive_file, parent_folder, old_parent_folder=None):
 
     if not complete:
         logger.error(f'{file_destination} : Was not downloaded due to an error. Check the log for more details.')
-        os.remove(file_destination)
+        file_destination.unlink()
     else:
         driveFileTime = time.strptime(drive_file['modifiedTime'], '%Y-%m-%dT%H:%M:%S.%fZ')
         driveFileTimeSecs = calendar.timegm(driveFileTime)
@@ -360,15 +373,15 @@ def get_file(drive_file, parent_folder, old_parent_folder=None):
 
     return file_destination if complete else None
 
-def add_path(part1, part2):
-    part2 = re.sub('[<>:"/\\\\|?*]|\.\.\Z', '-', part2, flags=re.IGNORECASE).strip()
-    new_path = os.path.join(part1, part2)
-
-    if sys.platform.startswith('win32'):
-        if len(new_path) + new_path.count('\\') > 248 and not new_path.startswith('\\\\?\\'):
-            new_path = '\\\\?\\' + new_path
-
-    return new_path
+# def add_path(part1, part2):
+#     part2 = re.sub('[<>:"/\\\\|?*]|\.\.\Z', '-', part2, flags=re.IGNORECASE).strip()
+#     new_path = os.path.join(part1, part2)
+#
+#     if sys.platform.startswith('win32'):
+#         if len(new_path) + new_path.count('\\') > 248 and not new_path.startswith('\\\\?\\'):
+#             new_path = '\\\\?\\' + new_path
+#
+#     return new_path
 
 def change_name(item_name):
     components = re.match('([^.]*)(\..*)?$', item_name)
@@ -391,10 +404,10 @@ def get_mimeType(google_mimeType):
     return new_mimeType
 
 def should_download(drive_file, path):
-    if not os.path.exists(path):
+    if not path.exists():
         return True
     drive_file_time = calendar.timegm(time.strptime(drive_file['modifiedTime'], '%Y-%m-%dT%H:%M:%S.%fZ'))
-    backup_file_time = os.path.getmtime(path)
+    backup_file_time = path.stat().st_mtime
     if drive_file_time > backup_file_time:
         return True
     else:
@@ -416,20 +429,21 @@ def clean_backup(save_destination, prev_save_destination=None):
 
 
 def clean_incremental_backup(save_destination, prev_save_destination):
-    current_directory_items = os.listdir(prev_save_destination)
+    current_directory_items = prev_save_destination.iterdir()
 
     keep_directory = False
     for item in current_directory_items:
-        item_destination = add_path(prev_save_destination, item)
-        if os.path.isfile(item_destination):
+        # item_destination = add_path(prev_save_destination, item)
+        if item.is_file():
             keep_directory = True
         else:
-            new_destination = add_path(save_destination, item)
-            keep_directory = clean_incremental_backup(new_destination, item_destination) or keep_directory
+            # new_destination = add_path(save_destination, item)
+            new_destination = save_destination / item.name
+            keep_directory = clean_incremental_backup(new_destination, item) or keep_directory
 
     if not keep_directory:
-        if os.path.exists(save_destination):
-            os.rmdir(prev_save_destination)
+        if save_destination.exists():
+            prev_save_destination.rmdir()
         else:
             keep_directory = True
 
@@ -440,9 +454,10 @@ def clean_updated_backup(save_destination, drive_folder_object=None):
     if not drive_folder_object:
         drive_folder_object = drive_file_system.get_root_folder()
 
-    folder_location = add_path(save_destination, drive_folder_object.name)
+    # folder_location = add_path(save_destination, drive_folder_object.name)
+    folder_location = save_destination / drive_folder_object.name
 
-    current_directory = set(os.listdir(folder_location))
+    current_directory = set((item.name for item in folder_location.iterdir()))
 
     for file in drive_folder_object.files.values():
         if re.match('application/vnd\.google-apps\..+', file['mimeType']):
@@ -453,20 +468,22 @@ def clean_updated_backup(save_destination, drive_folder_object=None):
         else:
             drive_file_name = file['name']
 
-        drive_file_name = add_path('',drive_file_name)
+        # drive_file_name = add_path('',drive_file_name)
 
         if drive_file_name in current_directory:
             current_directory.remove(drive_file_name)
 
     for folder in drive_folder_object.folders.values():
-        local_folder = add_path('', folder['name'])
+        # local_folder = add_path('', folder['name'])
+        local_folder = folder['name']
         if local_folder in current_directory:
             current_directory.remove(local_folder)
 
     for item in current_directory:
-        item_destination = add_path(folder_location, item)
-        if os.path.isfile(item_destination):
-            os.remove(item_destination)
+        # item_destination = add_path(folder_location, item)
+        item_destination = folder_location / item
+        if item_destination.is_file():
+            item_destination.unlink()
             logger.info(f'{item_destination} : Removed File')
         else:
             shutil.rmtree(item_destination)
@@ -495,14 +512,14 @@ def get_user():
 
 def setup_logging(log_destination):
     root_logger = logging.getLogger()
-    root_logger.setLevel(flags.logging_level)
+    root_logger.setLevel(config.logging_level)
 
-    log_file = os.path.join(log_destination, 'drive-backup.log')
+    log_file = log_destination / 'drive-backup.log'
     file_handler = logging.FileHandler(log_file, mode='w', encoding='utf-8')
-    file_handler.setLevel(flags.logging_level)
+    file_handler.setLevel(config.logging_level)
 
     name_spacing = '25'
-    if flags.logging_filter:
+    if config.logging_filter:
         filter = logging.Filter(name=__name__)
         file_handler.addFilter(filter)
         name_spacing = ''
@@ -570,7 +587,7 @@ def main():
         stop_backup()
     progress_update(f"Source Folder: {source_folder['name']}")
 
-    progress_update(f'Backup Type: {flags.backup_type.capitalize()}')
+    progress_update(f'Backup Type: {config.backup_type.capitalize()}')
 
     progress_update(f'Backup files to: {save_destination}')
 
