@@ -7,10 +7,15 @@ import re
 import logging
 import time
 import calendar
-import dfsmap
 import shutil
 import json
 from pathlib import Path
+from .dfsmap import DriveFileSystemMap
+from .config import config
+from .progress import progress
+from rich.console import Console
+from rich.prompt import Confirm
+from rich.text import Text
 
 from googleapiclient import discovery
 from googleapiclient import errors
@@ -20,56 +25,12 @@ from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 
-class Config:
-    def __init__(self, args):
-        self.destination = Path(args.get("destination")).absolute()
-        self.backup_name = args.get("backup_name")
-        self.backup_type = args.get("backup_type")
-        self.prev_backup_name = args.get("prev_backup_name")
-        self.source = args.get("source")
-        self.source_id = args.get("source_id")
-        self.google_doc_mimeType = args.get("google_doc_mimeType")
-        self.logging_level = args.get("logging_level")
-        self.logging_filter = args.get("logging_filter")
-        self.logging_changes = args.get("logging_changes")
-
-try:
-    import argparse
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--destination", help="The destination in the file system where the backup should be stored.", default='')
-    parser.add_argument("--backup_name", help="The name of the backup. This will be used as the name of the folder the backup source is stored in. Default is 'Google Drive Backup' followed by the date.")
-    parser.add_argument("--backup_type", help="The type of backup. 'complete' will create a new backup, leaving the previous backup untouched. \
-                                              'update' will update the previous backup to have the current files and folders from your Google Drive. \
-                                              'increment' creates a new backup, moving files that have not changed since the previous backup into the new backup, and leaving only old files remaining in the previous backup.",
-                                              choices=['complete', 'update', 'increment'], default='complete')
-    parser.add_argument("--prev_backup_name", help="The name of the previous backup. If the previous backup did not have the default name, this can be \
-                                                     used to tell drive backup what it is. If left blank, Drive Backup will look for the default name from backup_name with the most recent date.")
-    parser.add_argument("--source", help="The source folder on Google Drive to backup.")
-    parser.add_argument("--source_id", help="The source folder id on Google Drive to backup.", default='root')
-    parser.add_argument("--google_doc_mimeType", help="The desired mimeType conversion on all compatible Google Document types.", choices=['msoffice', 'pdf'], default='msoffice')
-    parser.add_argument(
-        '--logging_level', default='ERROR',
-        choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
-        help='Set the logging level of detail.')
-    parser.add_argument("--logging_filter", help="When this flag is present only messages generated from Google Drive Backup will be logged, not other libraries.", action='store_true')
-    parser.add_argument("--logging_changes", help="When this flag is present, only log files that need to be downloaded.", action='store_true')
-    flags = parser.parse_args()
-    config = Config(vars(flags))
-except ImportError:
-    flags = None
 
 # If modifying these scopes, delete your previously saved credentials
 # at ~/.credentials/drive-python-quickstart.json
 SCOPES = ['https://www.googleapis.com/auth/drive.readonly']
 CLIENT_SECRET_FILE = 'credentials.json'
 APPLICATION_NAME = 'Drive Backup'
-
-PROGRESS_BARS = (' ', '▌', '█')
-
-drive_file_system = None
-file_cnt = 0
-folder_cnt = 0
-
 MIME_TYPES = {
     'application/vnd.google-apps.document': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     'application/vnd.google-apps.spreadsheet': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -77,7 +38,6 @@ MIME_TYPES = {
     'application/vnd.google-apps.drawing': 'application/pdf',
     'application/vnd.google-apps.script': 'application/vnd.google-apps.script+json'
 }
-
 FILE_EXTENSIONS = {
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
@@ -86,6 +46,10 @@ FILE_EXTENSIONS = {
     'application/vnd.google-apps.script+json': 'json'
 }
 
+drive_file_system = None
+download_errors = 0
+
+console = Console(highlight=False)
 
 def get_credentials():
     """Gets valid user credentials from storage.
@@ -118,16 +82,16 @@ def get_credentials():
 
 def get_source_folder():
     logger = logging.getLogger(__name__)
-    if flags.source:
+    if config.source:
         try:
-            results = service.files().list(fields="files(id, name, mimeType)", q=f"'root' in parents and name='{flags.source}' and trashed=false").execute()
+            results = service.files().list(fields="files(id, name, mimeType)", q=f"'root' in parents and name='{config.source}' and trashed=false").execute()
         except:
             logger.critical('Error initiating backup.', exc_info=True)
             stop_backup()
         items = results.get('files', [])
     else:
         try:
-            results = service.files().get(fields="id, name, mimeType", fileId=flags.source_id).execute()
+            results = service.files().get(fields="id, name, mimeType", fileId=config.source_id).execute()
         except:
             logger.critical('Error initiating backup.', exc_info=True)
             stop_backup()
@@ -167,13 +131,13 @@ def get_save_destination():
     if not save_destination.exists():
         if config.backup_type == 'complete' or config.backup_type == 'increment':
             save_destination.mkdir(parents=True)
-        elif flags.backup_type == 'update':
+        elif config.backup_type == 'update':
             if recent_backup_destination:
                 recent_backup_destination.rename(save_destination)
             else:
                 save_destination.mkdir(parents=True)
 
-    if flags.backup_type == 'update':
+    if config.backup_type == 'update':
         recent_backup_destination = None
 
     return (save_destination, recent_backup_destination)
@@ -209,7 +173,7 @@ def get_recent_backup(directory, current_backup):
 
 def build_dfsmap(source_folder):
     logger = logging.getLogger(__name__)
-    drive_file_system = dfsmap.DriveFileSystemMap(source_folder)
+    drive_file_system = DriveFileSystemMap(source_folder)
 
     next_page_token = None
     while True:
@@ -235,8 +199,6 @@ def build_dfsmap(source_folder):
 
 
 def get_folder(parent_dest, prev_parent_dest=None, drive_folder_object=None):
-    global file_cnt
-    global folder_cnt
     global download_errors
     logger = logging.getLogger(__name__)
     if not drive_folder_object:
@@ -274,12 +236,11 @@ def get_folder(parent_dest, prev_parent_dest=None, drive_folder_object=None):
                 if download_errors >= 5:
                     logger.critical('Multiple consecutive failed file downloads. Stopping backup, check log for more details.')
                     stop_backup()
-        file_cnt += 1
+        progress.file_cnt += 1
 
     file_names = None
 
-    folder_cnt += 1
-    download_progress_update()
+    progress.folder_cnt += 1
 
     folder_names = set()
     for folder in drive_folder_object.folders.values():
@@ -345,17 +306,20 @@ def get_file(drive_file, parent_folder, old_parent_folder=None):
                 break
         except errors.HttpError as e:
             if is_abusive_file_error(e.content):
-                print('\r                                                                 ')
-                print('Problem downloading:')
-                print(f"'{drive_file_name}' is marked as potential malware or spam. Are you sure you want to download it?")
-                download_abusive_file = input('Download (y/n): ')
-                print()
-                if download_abusive_file == 'y':
+                progress.state = progress.state.PAUSE
+                prompt = (
+                    '[bold cyan]Problem downloading:[/]\n' +
+                    f"'[yellow]{drive_file_name}[/]' is marked as potential malware or spam.\n"
+                    "[bold cyan]Are you sure you want to download it?[/]"
+                )
+                download_abusive_file = Confirm.ask(prompt, console=console)
+                console.print()
+                progress.state = progress.state.DOWNLOAD
+                if download_abusive_file:
                     request = service.files().get_media(fileId=drive_file['id'], acknowledgeAbuse=True)
                     downloader = MediaIoBaseDownload(fh, request, chunksize=1024*1024)
                 else:
                     break
-                download_progress_update()
             else:
                 logger.exception('Could not complete request due to error.')
                 break
@@ -374,7 +338,7 @@ def get_file(drive_file, parent_folder, old_parent_folder=None):
     return file_destination if complete else None
 
 # def add_path(part1, part2):
-#     part2 = re.sub('[<>:"/\\\\|?*]|\.\.\Z', '-', part2, flags=re.IGNORECASE).strip()
+#     part2 = re.sub('[<>:"/\\\\|?*]|\.\.\Z', '-', part2, config=re.IGNORECASE).strip()
 #     new_path = os.path.join(part1, part2)
 #
 #     if sys.platform.startswith('win32'):
@@ -399,7 +363,7 @@ def change_name(item_name):
 
 def get_mimeType(google_mimeType):
     new_mimeType = MIME_TYPES.get(google_mimeType)
-    if new_mimeType and flags.google_doc_mimeType == 'pdf' and google_mimeType != 'application/vnd.google-apps.script':
+    if new_mimeType and config.google_doc_mimeType == 'pdf' and google_mimeType != 'application/vnd.google-apps.script':
         new_mimeType = 'application/pdf'
     return new_mimeType
 
@@ -422,9 +386,9 @@ def is_abusive_file_error(content):
 
 
 def clean_backup(save_destination, prev_save_destination=None):
-    if flags.backup_type == 'increment' and prev_save_destination:
+    if config.backup_type == 'increment' and prev_save_destination:
         clean_incremental_backup(save_destination, prev_save_destination)
-    elif flags.backup_type == 'update':
+    elif config.backup_type == 'update':
         clean_updated_backup(save_destination)
 
 
@@ -500,6 +464,7 @@ def stop_backup():
     logger = logging.getLogger(__name__)
     logger.critical('Could not complete backup. Check terminal and/or log file for more info.')
     logging.shutdown()
+    progress.state = progress.State.STOP
     sys.exit(1)
 
 def get_user():
@@ -524,116 +489,59 @@ def setup_logging(log_destination):
         file_handler.addFilter(filter)
         name_spacing = ''
 
-    class custom_filter():
-        def filter(self, record):
-            if record.levelname == 'ERROR' and record.exc_info:
-                return 0
-            return 1
-
-    stream_handler = logging.StreamHandler()
-    stream_handler.setLevel('ERROR')
-    stream_handler.addFilter(custom_filter())
-
     file_formatter = logging.Formatter('%(asctime)s - %(name)' + name_spacing + 's - %(levelname)8s - %(message)s')
-    stream_formatter = logging.Formatter('\r%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
     file_handler.setFormatter(file_formatter)
-    stream_handler.setFormatter(stream_formatter)
 
     root_logger.addHandler(file_handler)
-    root_logger.addHandler(stream_handler)
 
 def progress_update(msg):
     logger = logging.getLogger(__name__)
-    logger.info(msg)
-    print(msg)
+    text = Text.from_markup(msg)
+    plain_text = text.plain
+    logger.info(plain_text)
+    console.print(text)
 
-def download_progress_update():
-    global PROGRESS_BARS
-    total_files = drive_file_system.get_total_files()
-    total_folders = drive_file_system.get_total_folders()
-    frac_bars_cnt = len(PROGRESS_BARS)
-    total_width = 20
-    total_bars = total_width * (1.0 * file_cnt / total_files)
-    full_bars = int(total_bars)
-    blank_bars = total_width - (full_bars+1)
-    frac_bar = int((total_bars - full_bars) * frac_bars_cnt)
-    frac_bar_count = 0 if blank_bars < 0 else 1
-
-    progress_bar_str = f'[{PROGRESS_BARS[-1]*full_bars}{PROGRESS_BARS[frac_bar]*frac_bar_count}{PROGRESS_BARS[0]*blank_bars}]'
-
-    try:
-        print(f'\rProgress: {progress_bar_str} Files: {file_cnt}/{total_files} Folders: {folder_cnt}/{total_folders}', end='')
-    except:
-        PROGRESS_BARS = ('-', '=')
-        download_progress_update()
-
-def main():
+def run_drive_backup():
+    progress.state = progress.State.INITIATE
     save_destination, recent_backup_destination = get_save_destination()
 
     setup_logging(save_destination)
 
-    progress_update('Getting Credentials')
+    progress_update('[bold cyan]Getting Credentials')
     credentials = get_credentials()
-    progress_update('Verified Credentials')
+    progress_update('[bold cyan]Verified Credentials')
     global service
     service = discovery.build('drive', 'v3', credentials=credentials)
 
     user_info = get_user()
-    progress_update(f"Drive Account: {user_info['user']['displayName']} {user_info['user']['emailAddress']}")
+    progress_update(f"[bold cyan]Drive Account:[/] {user_info['user']['displayName']} {user_info['user']['emailAddress']}")
 
     source_folder = get_source_folder()
     if not source_folder:
         stop_backup()
-    progress_update(f"Source Folder: {source_folder['name']}")
+    progress_update(f"[bold cyan]Source Folder:[/] {source_folder['name']}")
 
-    progress_update(f'Backup Type: {config.backup_type.capitalize()}')
+    progress_update(f'[bold cyan]Backup Type:[/] {config.backup_type.capitalize()}')
 
-    progress_update(f'Backup files to: {save_destination}')
+    progress_update(f'[bold cyan]Backup files to:[/] {save_destination}')
 
-    start_time = time.time()
-
-    progress_update('Preparing Backup')
+    progress_update('[bold cyan]Preparing Backup')
+    progress.state = progress.State.PREPARE
     global drive_file_system
     drive_file_system = build_dfsmap(source_folder)
-
-    progress_update('Starting Backup')
-    download_progress_update()
-
+    progress.total_files = drive_file_system.get_total_files()
+    progress.total_folders = drive_file_system.get_total_folders()
+    progress_update('[bold cyan]Starting Backup')
+    progress.state = progress.State.DOWNLOAD
     get_folder(save_destination, recent_backup_destination)
+    progress.state = progress.State.COMPLETE
 
-    if flags.backup_type != 'complete':
-        print()
-        progress_update('Cleaning Up Backup')
+    if config.backup_type != 'complete':
+        console.print()
+        progress_update('[bold cyan]Cleaning Up Backup')
         clean_backup(save_destination, recent_backup_destination)
 
-    end_time = time.time()
-    duration = time.gmtime(end_time-start_time)
-    if duration.tm_hour > 0:
-        duration_str = time.strftime('%H:%M:%S', duration)
-    else:
-        duration_str = time.strftime('%M:%S', duration)
-
-    print()
-    progress_update(f'Backup Complete! - Duration: {duration_str}')
+    console.print()
+    progress_update(f'[bold cyan]Backup Complete!')
     logging.shutdown()
-
-    if sys.platform.startswith('win32'):
-        import zroya
-        zroya.init(APPLICATION_NAME, "GWaters", "Drive-Backup", "Backup", "1.0")
-        template = zroya.Template(zroya.TemplateType.ImageAndText2)
-        template.setFirstLine(APPLICATION_NAME)
-        template.setSecondLine("Drive Backup is complete!")
-        template.setImage('drive-backup-icon.png')
-        zroya.show(template)
-    elif sys.platform.startswith('darwin'):
-        import pync
-        pync.notify('Drive Backup is complete!',
-                    title=APPLICATION_NAME,
-                    sender='org.python.python',
-                    appIcon='drive-backup-icon.png',
-                    sound='default')
-
-
-if __name__ == '__main__':
-    main()
