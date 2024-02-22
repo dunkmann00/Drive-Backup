@@ -1,10 +1,10 @@
 import collections
 
 class DriveFileSystemMap(object):
-    Drive_folder_object = collections.namedtuple('Drive_folder_object',['name', 'files', 'folders'])
+    Drive_folder_object = collections.namedtuple('Drive_folder_object',['name', 'files', 'folders', 'temp'])
 
     def __init__(self, root_folder):
-        self._file_system_map = {root_folder['id']: self.Drive_folder_object(root_folder['name'], {}, {})}
+        self._file_system_map = {root_folder['id']: self.Drive_folder_object(root_folder['name'], {}, {}, False)}
         self._total_folders = -1
         self._total_files = -1
         self.root_folder_id = root_folder['id']
@@ -26,7 +26,7 @@ class DriveFileSystemMap(object):
         self._total_files = -1
         if 'parents' in drive_object:
             if drive_object['id'] not in self._file_system_map:
-                drive_folder = self.Drive_folder_object(drive_object['name'], {}, {})
+                drive_folder = self.Drive_folder_object(drive_object['name'], {}, {}, False)
                 self._file_system_map[drive_object['id']] = drive_folder
                 self._add_to_parents(drive_object)
             elif self._is_temporary_folder(drive_object['id']):
@@ -65,14 +65,14 @@ class DriveFileSystemMap(object):
         return self._total_files
 
     def _get_temp_folder_object(self):
-        return self.Drive_folder_object('TEMP',{},{})
+        return self.Drive_folder_object('TEMP', {}, {}, True)
 
     def _get_perm_folder_object(self, folder_object):
         temp_folder = self._file_system_map[folder_object['id']]
-        return temp_folder._replace(name=folder_object['name'])
+        return temp_folder._replace(name=folder_object['name'], temp=False)
 
     def _is_temporary_folder(self, folder_id):
-        return self._file_system_map[folder_id].name == 'TEMP'
+        return self._file_system_map[folder_id].temp
 
     def _update_totals(self):
         self._total_folders, self._total_files = self._count_totals(self.get_root_folder())
