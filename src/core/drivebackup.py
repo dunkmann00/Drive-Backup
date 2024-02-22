@@ -178,7 +178,7 @@ def build_dfsmap(source_folder):
     next_page_token = None
     while True:
         results = service.files().list(pageSize=1000,
-                                       fields="nextPageToken, files(id, name, mimeType, modifiedTime, parents, size)",
+                                       fields="nextPageToken, files(id, name, mimeType, modifiedTime, parents, shortcutDetails, size)",
                                        q=u"trashed=false",
                                        pageToken=next_page_token,
                                        orderBy='folder desc').execute(num_retries=5)
@@ -186,6 +186,9 @@ def build_dfsmap(source_folder):
             logger.error('Could not prepare the backup succesfully. Check the log for more details.')
             results = {}
         for object in results.get('files', []):
+            if object['mimeType'] == 'application/vnd.google-apps.shortcut':
+                object['id'] = object['shortcutDetails']['targetId']
+                object['mimeType'] = object['shortcutDetails']['targetMimeType']
             if object['mimeType'] == 'application/vnd.google-apps.folder':
                 drive_file_system.add_folder(object)
             else:
