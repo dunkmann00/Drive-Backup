@@ -10,7 +10,6 @@ google-api-python-client = "*"
 google-auth-httplib2 = "*"
 google-auth-oauthlib = "*"
 zroya = {version = "*", sys_platform = "== 'win32'"}
-pync = {version = "*", sys_platform = "== 'darwin'"}
 rich = "*"
 
 [requires]

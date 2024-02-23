@@ -113,9 +113,5 @@ def main():
         template.setImage('drive-backup-icon.png')
         zroya.show(template)
     elif sys.platform.startswith('darwin'):
-        import pync
-        pync.notify('Drive Backup is complete!',
-                    title=APPLICATION_NAME,
-                    sender='org.python.python',
-                    appIcon='drive-backup-icon.png',
-                    sound='default')
+        import subprocess
+        subprocess.run(["notifications/mac/Drive Backup Notifications.app/Contents/MacOS/Drive Backup Notifications", "-title", APPLICATION_NAME, "-body", "Drive Backup is complete!"])
