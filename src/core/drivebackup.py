@@ -16,6 +16,7 @@ from .progress import progress
 from rich.console import Console
 from rich.prompt import Confirm
 from rich.text import Text
+from pathvalidate import sanitize_filename, validate_filename, ValidationError
 
 from googleapiclient import discovery
 from googleapiclient import errors
@@ -118,6 +119,13 @@ def get_source_folder():
 def get_save_destination():
     parent_destination = config.destination
     if config.backup_name:
+        try:
+            validate(config.backup_name)
+        except ValidationError as e:
+            logger = logging.getLogger(__name__)
+            logger.critical(f"Invalid backup name: '{config.backup_name}'")
+            logger.critical(e)
+            stop_backup()
         backup_name = config.backup_name
     else:
         current_time = time.localtime()
@@ -186,6 +194,7 @@ def build_dfsmap(source_folder):
             logger.error('Could not prepare the backup succesfully. Check the log for more details.')
             results = {}
         for object in results.get('files', []):
+            object['name'] = sanitize(object['name'])
             if object['mimeType'] == 'application/vnd.google-apps.shortcut':
                 object['id'] = object['shortcutDetails']['targetId']
                 object['mimeType'] = object['shortcutDetails']['targetMimeType']
@@ -339,6 +348,12 @@ def get_file(drive_file, parent_folder, old_parent_folder=None):
         os.utime(file_destination, (driveFileTimeSecs,driveFileTimeSecs))
 
     return file_destination if complete else None
+
+def validate(name):
+    validate_filename(name, platform="auto")
+
+def sanitize(name):
+    return sanitize_filename(name, replacement_text="-", platform="auto")
 
 # def add_path(part1, part2):
 #     part2 = re.sub('[<>:"/\\\\|?*]|\.\.\Z', '-', part2, config=re.IGNORECASE).strip()
