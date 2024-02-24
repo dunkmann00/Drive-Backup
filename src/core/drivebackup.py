@@ -132,7 +132,6 @@ def get_save_destination():
         date_string = f'{current_time.tm_mon}-{current_time.tm_mday}-{current_time.tm_year}'
         backup_name = 'Google Drive Backup ' + date_string
 
-    # save_destination = add_path(parent_destination, backup_name)
     save_destination = parent_destination / backup_name
     recent_backup_destination = get_recent_backup(parent_destination, backup_name)
 
@@ -216,11 +215,9 @@ def get_folder(parent_dest, prev_parent_dest=None, drive_folder_object=None):
     if not drive_folder_object:
         drive_folder_object = drive_file_system.get_root_folder()
 
-    # folder_location = add_path(parent_dest, drive_folder_object.name)
     folder_location = parent_dest / drive_folder_object.name
     prev_folder_location = None
     if prev_parent_dest:
-        # prev_folder_location = add_path(prev_parent_dest, drive_folder_object.name)
         prev_folder_location = prev_parent_dest / drive_folder_object.name
 
     if not folder_location.exists():
@@ -281,11 +278,9 @@ def get_file(drive_file, parent_folder, old_parent_folder=None):
         logger.critical(f'Backup destination folder does not exist: {parent_folder}  Restart backup')
         stop_backup()
 
-    # file_destination = add_path(parent_folder, drive_file_name)
     file_destination = parent_folder / drive_file_name
     old_file_destination = None
     if old_parent_folder and old_parent_folder.exists():
-        # old_file_destination = add_path(old_parent_folder, drive_file_name)
         old_file_destination = old_parent_folder / drive_file_name
 
     if not should_download(drive_file, file_destination) or (old_file_destination and not should_download(drive_file, old_file_destination)):
@@ -355,16 +350,6 @@ def validate(name):
 def sanitize(name):
     return sanitize_filename(name, replacement_text="-", platform="auto")
 
-# def add_path(part1, part2):
-#     part2 = re.sub('[<>:"/\\\\|?*]|\.\.\Z', '-', part2, config=re.IGNORECASE).strip()
-#     new_path = os.path.join(part1, part2)
-#
-#     if sys.platform.startswith('win32'):
-#         if len(new_path) + new_path.count('\\') > 248 and not new_path.startswith('\\\\?\\'):
-#             new_path = '\\\\?\\' + new_path
-#
-#     return new_path
-
 def change_name(item_name):
     components = re.match('([^.]*)(\..*)?$', item_name)
     if not components:
@@ -415,11 +400,9 @@ def clean_incremental_backup(save_destination, prev_save_destination):
 
     keep_directory = False
     for item in current_directory_items:
-        # item_destination = add_path(prev_save_destination, item)
         if item.is_file():
             keep_directory = True
         else:
-            # new_destination = add_path(save_destination, item)
             new_destination = save_destination / item.name
             keep_directory = clean_incremental_backup(new_destination, item) or keep_directory
 
@@ -436,7 +419,6 @@ def clean_updated_backup(save_destination, drive_folder_object=None):
     if not drive_folder_object:
         drive_folder_object = drive_file_system.get_root_folder()
 
-    # folder_location = add_path(save_destination, drive_folder_object.name)
     folder_location = save_destination / drive_folder_object.name
 
     current_directory = set((item.name for item in folder_location.iterdir()))
@@ -450,19 +432,15 @@ def clean_updated_backup(save_destination, drive_folder_object=None):
         else:
             drive_file_name = file['name']
 
-        # drive_file_name = add_path('',drive_file_name)
-
         if drive_file_name in current_directory:
             current_directory.remove(drive_file_name)
 
     for folder in drive_folder_object.folders.values():
-        # local_folder = add_path('', folder['name'])
         local_folder = folder['name']
         if local_folder in current_directory:
             current_directory.remove(local_folder)
 
     for item in current_directory:
-        # item_destination = add_path(folder_location, item)
         item_destination = folder_location / item
         if item_destination.is_file():
             item_destination.unlink()
