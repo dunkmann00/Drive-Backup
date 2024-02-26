@@ -13,12 +13,12 @@ class GDBMofNCompleteColumn(MofNCompleteColumn):
 
 columns = [
     TextColumn("[progress.description]{task.description}"),
-    BarColumn(complete_style="bar.finished", pulse_style="bar.finished"),
+    BarColumn(bar_width=None, complete_style="bar.finished", pulse_style="bar.finished"),
     GDBMofNCompleteColumn(),
     TaskProgressColumn(),
     TimeElapsedColumn(table_column=Column(justify="right", min_width=7))
 ]
-progress_bar = Progress(*columns, console=console, expand=True)
+progress_bar = Progress(*columns, console=console)
 task = progress_bar.add_task("[green]Ready...", total=None, visible=False)
 
 def update(progress):
