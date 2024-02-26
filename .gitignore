@@ -1,6 +1,7 @@
 # Custom files/directories
 dev/
 drive-backup-icon.psd
+credentials.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

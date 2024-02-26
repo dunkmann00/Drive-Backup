@@ -64,7 +64,7 @@ def get_credentials():
     credential_dir = Path("~/.credentials").expanduser()
     if not credential_dir.exists():
         credential_dir.mkdir()
-    credential_path = credential_dir / 'drive-python-quickstart.json'
+    credential_path = credential_dir / 'drive-backup-user-cred.json'
 
     credentials = None
     if credential_path.exists():
