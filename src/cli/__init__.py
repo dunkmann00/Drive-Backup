@@ -1,5 +1,6 @@
 from ..core import config, run_drive_backup, progress
 from ..core.drivebackup import APPLICATION_NAME, console
+from ..notifications import show_notification
 from rich.progress import Progress, TextColumn, BarColumn, MofNCompleteColumn, TimeElapsedColumn, TaskProgressColumn
 from rich.table import Column
 from rich.text import Text
@@ -104,14 +105,4 @@ def main():
         progress.subscribe(update)
         run_drive_backup()
 
-    if sys.platform.startswith('win32'):
-        import zroya
-        zroya.init(APPLICATION_NAME, "GWaters", "Drive-Backup", "Backup", "1.0")
-        template = zroya.Template(zroya.TemplateType.ImageAndText2)
-        template.setFirstLine(APPLICATION_NAME)
-        template.setSecondLine("Drive Backup is complete!")
-        template.setImage('drive-backup-icon.png')
-        zroya.show(template)
-    elif sys.platform.startswith('darwin'):
-        import subprocess
-        subprocess.run(["notifications/mac/Drive Backup Notifications.app/Contents/MacOS/Drive Backup Notifications", "-title", APPLICATION_NAME, "-body", "Drive Backup is complete!"])
+    show_notification()
