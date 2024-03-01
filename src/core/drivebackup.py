@@ -190,7 +190,7 @@ def build_dfsmap(source_folder):
                                        pageToken=next_page_token,
                                        orderBy='folder desc').execute(num_retries=5)
         if not results:
-            logger.error('Could not prepare the backup succesfully. Check the log for more details.')
+            logger.error('Could not prepare the backup successfully. Check the log for more details.')
             results = {}
         for object in results.get('files', []):
             object['name'] = sanitize(object['name'])
