@@ -37,4 +37,6 @@ $ python drivebackup.py --logging_level INFO --logging_filter --destination "My 
 
 ## Copyright and License
 
-© 2016 George Waters under the MIT License
+Google Drive is a trademark of Google Inc. Use of this trademark is subject to Google Permissions.
+
+2024 George Waters under the MIT License
