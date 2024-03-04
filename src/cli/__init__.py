@@ -43,6 +43,8 @@ def update(progress):
         description = "[red]Stopped..."
         columns[1].finished_style = "bar.complete"
         columns[1].complete_style = "bar.complete"
+        if progress.total_files == 0:
+            total = 0
 
     if progress.state in (progress.State.INITIATE, progress.State.PREPARE, progress.State.DOWNLOAD, progress.state.COMPLETE, progress.state.STOP):
         visible = True
@@ -77,24 +79,31 @@ def setup_logging():
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--destination", help="The destination in the file system where the backup should be stored. Default is the current directory.")
-    parser.add_argument("--backup_name", help="The name of the backup. This will be used as the name of the folder the backup source is stored in. Default is 'Google Drive Backup' followed by the date.")
-    parser.add_argument("--backup_type", help="The type of backup. 'complete' will create a new backup, leaving the previous backup untouched. \
+    parser.add_argument("-d", "--destination", help="The destination in the file system where the backup should be stored. Default is the current directory.")
+    parser.add_argument("-n", "--backup-name", help="The name of the backup. This will be used as the name of the folder the backup source is stored in. Default is 'Google Drive Backup' followed by the date.")
+    parser.add_argument("-t", "--backup-type", help="The type of backup. 'complete' will create a new backup, leaving the previous backup untouched. \
                                               'update' will update the previous backup to have the current files and folders from your Google Drive. \
                                               'increment' creates a new backup, moving files that have not changed since the previous backup into the new backup, and leaving only old files remaining in the previous backup. \
                                               Default is 'complete'.",
                                               choices=['complete', 'update', 'increment'])
-    parser.add_argument("--prev_backup_name", help="The name of the previous backup. If the previous backup did not have the default name, this can be \
+    parser.add_argument("-c", "--backup-config", nargs="?", const=True, help="The path to the .bkp backup config file to use to set the config options for the backup. Drive \
+                                              Backup creates this file when it successfully completes a backup. The file is placed in the backup's destination directory if this flag isn't present. \
+                                              If this flag is given without a path the current directory and default name is used to find the file. If this flag is given with a directory, \
+                                              the directory is used with the default name to find the file. If this flag is given with a file, that is used to find the file. If other flags are given along with this flag, \
+                                              they will override the config set in the .bkp file.")
+    parser.add_argument("--prev-backup-name", help="The name of the previous backup. If the previous backup did not have the default name, this can be \
                                                      used to tell drive backup what it is. If left blank, Drive Backup will look for the default name from backup_name with the most recent date.")
-    parser.add_argument("--source", help="The source folder on Google Drive to backup.")
-    parser.add_argument("--source_id", help="The source folder id on Google Drive to backup. Default is everything on Google Drive.")
-    parser.add_argument("--google_doc_mimeType", help="The desired mimeType conversion on all compatible Google Document types. Default is to convert documents to their 'msoffice' compatible type.", choices=['msoffice', 'pdf'])
+    parser.add_argument("-s", "--source", help="The source folder on Google Drive to backup.")
+    parser.add_argument("--source-id", help="The source folder id on Google Drive to backup. Default is everything on Google Drive.")
+    parser.add_argument("--google-doc-mimeType", help="The desired mimeType conversion on all compatible Google Document types. Default is to convert documents to their 'msoffice' compatible type.", choices=['msoffice', 'pdf'])
     parser.add_argument(
-        '--logging_level',
+        '--log-level',
         choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
         help="Set the logging level of detail. Default is 'INFO'")
-    parser.add_argument("--logging_filter", help="When this flag is present, only messages generated from Google Drive Backup will be logged, not other libraries.", action='store_true')
-    parser.add_argument("--logging_changes", help="When this flag is present, only log files that need to be downloaded.", action='store_true')
+    parser.add_argument("--log-filter", help="Only log messages generated from Google Drive Backup, ignore messages from other libraries. If neither option is given, all messages are logged.", action=argparse.BooleanOptionalAction)
+    parser.add_argument("--log-changes", help="Only log files that need to be downloaded. If neither option is given, all files are logged.", action=argparse.BooleanOptionalAction)
+    parser.add_argument("--log-path", nargs="?", const=False, help="The path to the log file. If not set or set with no path, the log file is stored alongside the directory where the backup is stored. If this flag is set with a directory, the log file is stored in the \
+                                            directory with the default name. If this flag is set with a file, it is used to store the logs.")
     args = parser.parse_args()
     args = { key:value for key, value in vars(args).items() if value is not None }
     config.set_config(args)

@@ -11,7 +11,7 @@ import shutil
 import json
 from pathlib import Path
 from .dfsmap import DriveFileSystemMap
-from .config import config
+from .config import config, DEFAULT_LOG
 from .progress import progress
 from rich.console import Console
 from rich.prompt import Confirm
@@ -284,7 +284,7 @@ def get_file(drive_file, parent_folder, old_parent_folder=None):
         old_file_destination = old_parent_folder / drive_file_name
 
     if not should_download(drive_file, file_destination) or (old_file_destination and not should_download(drive_file, old_file_destination)):
-        if not config.logging_changes:
+        if not config.log_changes:
             logger.info(f'{file_destination} : Already downloaded current version')
         if old_file_destination and old_file_destination.exists(): #need the extra check to ensure no errors in the event of duplicate files with same name
             if config.backup_type == 'complete':
@@ -459,7 +459,6 @@ def clean_updated_backup(save_destination, drive_folder_object=None):
 def stop_backup():
     logger = logging.getLogger(__name__)
     logger.critical('Could not complete backup. Check terminal and/or log file for more info.')
-    logging.shutdown()
     progress.state = progress.State.STOP
     sys.exit(1)
 
@@ -473,14 +472,21 @@ def get_user():
 
 def setup_logging(log_destination):
     root_logger = logging.getLogger()
-    root_logger.setLevel(config.logging_level)
+    root_logger.setLevel(config.log_level)
 
-    log_file = log_destination / 'drive-backup.log'
-    file_handler = logging.FileHandler(log_file, mode='w', encoding='utf-8')
-    file_handler.setLevel(config.logging_level)
+    log_file = config.log_path or (log_destination / DEFAULT_LOG)
+    try:
+        file_handler = logging.FileHandler(log_file, mode='w', encoding='utf-8')
+    except FileNotFoundError:
+        logger = logging.getLogger(__name__)
+        logger.critical(f"Log file '{log_file}' could not be created.")
+        progress.state = progress.State.STOP
+        sys.exit(1)
+
+    file_handler.setLevel(config.log_level)
 
     name_spacing = '25'
-    if config.logging_filter:
+    if config.log_filter:
         filter = logging.Filter(name=__name__)
         file_handler.addFilter(filter)
         name_spacing = ''
@@ -540,4 +546,4 @@ def run_drive_backup():
 
     console.print()
     progress_update(f'[bold cyan]Backup Complete!')
-    logging.shutdown()
+    config.store_config()
