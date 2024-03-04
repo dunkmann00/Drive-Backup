@@ -1,6 +1,5 @@
 from ..core import config, run_drive_backup, progress
-from ..core.drivebackup import APPLICATION_NAME, console
-from ..notifications import show_notification
+from ..core.drivebackup import console
 from rich.progress import Progress, TextColumn, BarColumn, MofNCompleteColumn, TimeElapsedColumn, TaskProgressColumn
 from rich.table import Column
 from rich.text import Text
@@ -113,5 +112,3 @@ def main():
     with progress_bar:
         progress.subscribe(update)
         run_drive_backup()
-
-    show_notification()

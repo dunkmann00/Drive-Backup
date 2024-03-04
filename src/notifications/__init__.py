@@ -1,13 +1,7 @@
-from ..core.drivebackup import APPLICATION_NAME
 import importlib.resources as resources
 import platform, subprocess, os, logging
 
-def show_notification(title=None, body=None, image=None):
-    if title is None:
-        title = APPLICATION_NAME
-    if body is None:
-        body = "Drive Backup is complete!"
-
+def show_notification(title, body, image=None):
     notification_dir = resources.files("src.notifications")
 
     try:
