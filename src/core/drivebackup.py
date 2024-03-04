@@ -24,6 +24,7 @@ from googleapiclient import errors
 from googleapiclient.http import MediaIoBaseDownload
 
 from google.auth.transport.requests import Request
+from google.auth.exceptions import RefreshError
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 
@@ -72,8 +73,12 @@ def get_credentials():
         credentials = Credentials.from_authorized_user_file(str(credential_path), SCOPES)
     if not credentials or not credentials.valid:
         if credentials and credentials.expired and credentials.refresh_token:
-            credentials.refresh(Request())
-        else:
+            try:
+                credentials.refresh(Request())
+            except RefreshError:
+                logger = logging.getLogger(__name__)
+                logger.info("Credential refresh failed.")
+        if credentials and credentials.expired:
             flow = InstalledAppFlow.from_client_secrets_file(CLIENT_SECRET_FILE, SCOPES)
             credentials = flow.run_local_server(port=0)
         logger = logging.getLogger(__name__)
