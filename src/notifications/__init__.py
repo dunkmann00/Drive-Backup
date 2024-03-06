@@ -7,7 +7,7 @@ def show_notification(title, body, image=None):
     try:
         if platform.system() == "Windows":
             if image is None:
-                image = notification_dir.parents[1] / "drive-backup-icon.png"
+                image = resources.files("src.resources") / "drive-backup-icon.png"
             win_drive_notification = notification_dir / "windows" / "build" / "Drive Backup Notifications.exe"
             subprocess.Popen([win_drive_notification, "--title", title, "--body", body, "--image", image])
         elif platform.system() == "Darwin":
