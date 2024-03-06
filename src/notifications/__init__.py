@@ -1,4 +1,4 @@
-import importlib.resources as resources
+from importlib import resources
 import platform, subprocess, os, logging
 
 def show_notification(title, body, image=None):
