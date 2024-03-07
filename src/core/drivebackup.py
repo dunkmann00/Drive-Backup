@@ -18,6 +18,7 @@ from rich.console import Console
 from rich.prompt import Confirm
 from rich.text import Text
 from pathvalidate import sanitize_filename, validate_filename, ValidationError
+from importlib import resources
 
 from googleapiclient import discovery
 from googleapiclient import errors
@@ -26,13 +27,11 @@ from googleapiclient.http import MediaIoBaseDownload
 from google.auth.transport.requests import Request
 from google.auth.exceptions import RefreshError
 from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
 
+from ..credentials import get_new_credentials, SCOPES
 
-# If modifying these scopes, delete your previously saved credentials
-# at ~/.credentials/drive-python-quickstart.json
-SCOPES = ['https://www.googleapis.com/auth/drive.readonly']
-CLIENT_SECRET_FILE = 'credentials.json'
+DEFAULT_CLIENT_CREDENTIAL = "credentials.json"
+CREDENTIAL_FILE = 'drive-backup-user-cred.json'
 APPLICATION_NAME = 'Drive Backup'
 MIME_TYPES = {
     'application/vnd.google-apps.document': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -63,10 +62,11 @@ def get_credentials():
     Returns:
         Credentials, the obtained credential.
     """
+    logger = logging.getLogger(__name__)
     credential_dir = Path("~/.credentials").expanduser()
     if not credential_dir.exists():
         credential_dir.mkdir()
-    credential_path = credential_dir / 'drive-backup-user-cred.json'
+    credential_path = credential_dir / CREDENTIAL_FILE
 
     credentials = None
     if credential_path.exists():
@@ -76,15 +76,27 @@ def get_credentials():
             try:
                 credentials.refresh(Request())
             except RefreshError:
-                logger = logging.getLogger(__name__)
                 logger.info("Credential refresh failed.")
-        if credentials and credentials.expired:
-            flow = InstalledAppFlow.from_client_secrets_file(CLIENT_SECRET_FILE, SCOPES)
-            credentials = flow.run_local_server(port=0)
-        logger = logging.getLogger(__name__)
-        logger.info(f'Storing credentials to {credential_path}', )
-        with credential_path.open("w") as token:
-            token.write(credentials.to_json())
+        if not credentials or credentials and credentials.expired:
+            client_credentials_path = config.client_credentials or (resources.files("src.resources") / DEFAULT_CLIENT_CREDENTIAL)
+            try:
+                client_credentials = client_credentials_path.read_bytes()
+            except FileNotFoundError:
+                logger.critical(f"Client credential file '{client_credentials_path}' could not be found.")
+                client_credentials = None
+            if client_credentials is not None:
+                try:
+                    credentials = get_new_credentials(client_credentials)
+                except (json.JSONDecodeError, ValueError):
+                    logger.critical("Client credential corrupted, unable to parse.")
+                except KeyboardInterrupt:
+                    logger.info("Keyboard Interrupt detected, cancelling...")
+        if credentials:
+            logger.info(f'Storing credentials to {credential_path}', )
+            with credential_path.open("w") as token:
+                token.write(credentials.to_json())
+        else:
+            logger.critical('Could not get credentials.')
     return credentials
 
 def get_source_folder():
@@ -519,6 +531,8 @@ def run_drive_backup():
 
     progress_update('[bold cyan]Getting Credentials')
     credentials = get_credentials()
+    if not credentials:
+        stop_backup()
     progress_update('[bold cyan]Verified Credentials')
     global service
     service = discovery.build('drive', 'v3', credentials=credentials)

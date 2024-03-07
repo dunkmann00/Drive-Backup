@@ -95,6 +95,7 @@ def main():
     parser.add_argument("-s", "--source", help="The source folder on Google Drive to backup.")
     parser.add_argument("--source-id", help="The source folder id on Google Drive to backup. Default is everything on Google Drive.")
     parser.add_argument("--google-doc-mimeType", help="The desired mimeType conversion on all compatible Google Document types. Default is to convert documents to their 'msoffice' compatible type.", choices=['msoffice', 'pdf'])
+    parser.add_argument("--client-credentials", help="The path to a client credential file. This can possibly help download your files from Google Drive if you are having difficulties.")
     parser.add_argument(
         '--log-level',
         choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],

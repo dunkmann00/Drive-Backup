@@ -5,6 +5,8 @@ import json, logging, sys
 DEFAULT_BACKUP_CONFIG = "drive-backup.bkp"
 DEFAULT_LOG = "drive-backup.log"
 
+# TODO: Add option to delete user credentials (token)
+
 class Config:
     def __init__(self, args=None):
         if args is None:
@@ -32,6 +34,7 @@ class Config:
         self.source = args.get("source")
         self.source_id = args.get("source_id", "root")
         self.google_doc_mimeType = args.get("google_doc_mimeType", "msoffice")
+        self.client_credentials = Path(args["client_credentials"]).absolute() if args.get("client_credentials") else None
         self.log_level = args.get("log_level", "INFO")
         self.log_filter = bool(args.get("log_filter", False))
         self.log_changes = bool(args.get("log_changes", False))
@@ -59,6 +62,7 @@ class Config:
             "source": self.source,
             "source_id": self.source_id,
             "google_doc_mimeType": self.google_doc_mimeType,
+            "client_credentials": str(self.client_credentials) if self.client_credentials is not None else None,
             "log_level": self.log_level,
             "log_filter": int(self.log_filter),
             "log_changes": int(self.log_changes),
