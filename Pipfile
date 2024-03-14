@@ -11,6 +11,7 @@ google-auth-httplib2 = "*"
 google-auth-oauthlib = "*"
 rich = "*"
 pathvalidate = "*"
+cryptography = "*"
 
 [requires]
 python_version = "3.11"
