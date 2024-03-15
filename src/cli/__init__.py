@@ -1,9 +1,9 @@
-from ..core import config, run_drive_backup, progress
-from ..core.drivebackup import console
+from src.core import config, run_drive_backup, remove_user_credentials, progress, console
 from rich.progress import Progress, TextColumn, BarColumn, MofNCompleteColumn, TimeElapsedColumn, TaskProgressColumn
 from rich.table import Column
 from rich.text import Text
-import argparse, logging, sys
+import click
+import logging, sys
 
 class GDBMofNCompleteColumn(MofNCompleteColumn):
     def render(self, task):
@@ -76,36 +76,80 @@ def setup_logging():
 
     root_logger.addHandler(stream_handler)
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-d", "--destination", help="The destination in the file system where the backup should be stored. Default is the current directory.")
-    parser.add_argument("-n", "--backup-name", help="The name of the backup. This will be used as the name of the folder the backup source is stored in. Default is 'Google Drive Backup' followed by the date.")
-    parser.add_argument("-t", "--backup-type", help="The type of backup. 'complete' will create a new backup, leaving the previous backup untouched. \
-                                              'update' will update the previous backup to have the current files and folders from your Google Drive. \
-                                              'increment' creates a new backup, moving files that have not changed since the previous backup into the new backup, and leaving only old files remaining in the previous backup. \
-                                              Default is 'complete'.",
-                                              choices=['complete', 'update', 'increment'])
-    parser.add_argument("-c", "--backup-config", nargs="?", const=True, help="The path to the .bkp backup config file to use to set the config options for the backup. Drive \
-                                              Backup creates this file when it successfully completes a backup. The file is placed in the backup's destination directory if this flag isn't present. \
-                                              If this flag is given without a path the current directory and default name is used to find the file. If this flag is given with a directory, \
-                                              the directory is used with the default name to find the file. If this flag is given with a file, that is used to find the file. If other flags are given along with this flag, \
-                                              they will override the config set in the .bkp file.")
-    parser.add_argument("--prev-backup-name", help="The name of the previous backup. If the previous backup did not have the default name, this can be \
-                                                     used to tell drive backup what it is. If left blank, Drive Backup will look for the default name from backup_name with the most recent date.")
-    parser.add_argument("-s", "--source", help="The source folder on Google Drive to backup.")
-    parser.add_argument("--source-id", help="The source folder id on Google Drive to backup. Default is everything on Google Drive.")
-    parser.add_argument("--google-doc-mimeType", help="The desired mimeType conversion on all compatible Google Document types. Default is to convert documents to their 'msoffice' compatible type.", choices=['msoffice', 'pdf'])
-    parser.add_argument("--client-credentials", help="The path to a client credential file. This can possibly help download your files from Google Drive if you are having difficulties.")
-    parser.add_argument(
-        '--log-level',
-        choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
-        help="Set the logging level of detail. Default is 'INFO'")
-    parser.add_argument("--log-filter", help="Only log messages generated from Google Drive Backup, ignore messages from other libraries. If neither option is given, all messages are logged.", action=argparse.BooleanOptionalAction)
-    parser.add_argument("--log-changes", help="Only log files that need to be downloaded. If neither option is given, all files are logged.", action=argparse.BooleanOptionalAction)
-    parser.add_argument("--log-path", nargs="?", const=False, help="The path to the log file. If not set or set with no path, the log file is stored alongside the directory where the backup is stored. If this flag is set with a directory, the log file is stored in the \
-                                            directory with the default name. If this flag is set with a file, it is used to store the logs.")
-    args = parser.parse_args()
-    args = { key:value for key, value in vars(args).items() if value is not None }
+
+class HelpFormatter(click.HelpFormatter):
+    def write_usage(self, prog: str, args: str = "", prefix: str | None = None) -> None:
+        super().write_usage(prog, args=args, prefix=click.style("Usage: ", bold=True))
+
+    def write_heading(self, heading: str) -> None:
+        super().write_heading(click.style(heading, bold=True))
+
+    def write_dl(
+        self,
+        rows,
+        col_max: int = 30,
+        col_spacing: int = 2,
+    ) -> None:
+        rows = [(click.style(first, fg="cyan"), second) for (first, second) in rows]
+        super().write_dl(rows, col_max, col_spacing)
+
+click.Context.formatter_class = HelpFormatter
+
+CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+
+@click.group(context_settings=CONTEXT_SETTINGS)
+def cli():
+    pass
+
+@cli.group(help="Manage the user credential for Drive Backup.")
+def cred():
+    pass
+
+@cred.command("remove", help="Remove the user credential.")
+def remove_drive_credentials():
+    remove_user_credentials()
+
+@cred.command("sign-in", help="Sign in to Google to acquire a user credential.")
+def sign_in_drive_credentials():
+    pass
+
+@cli.command("backup", help="Run a backup for your Google Drive.")
+@click.option("-d", "--destination", help="The destination in the file system where the backup should be stored. Default is the current directory.")
+@click.option("-n", "--backup-name", help="The name of the backup. This will be used as the name of the folder the backup source is stored in. Default when not given or empty is 'Google Drive Backup' followed by the date.")
+@click.option("-t", "--backup-type", type=click.Choice(['complete', 'update', 'increment'], case_sensitive=False),
+    help=("The type of backup. 'complete' will create a new backup, leaving the previous backup untouched. "
+    "'update' will update the previous backup to have the current files and folders from your Google Drive. "
+    "'increment' creates a new backup, moving files that have not changed since the previous backup into the new backup, and leaving only old files remaining in the previous backup. "
+    "Default is 'complete'.")
+)
+@click.option("-c", "--backup-config", is_flag=False, flag_value=True,
+    help=("The path to the .bkp backup config file to use to set the config options for the backup. Drive "
+    "Backup creates this file when it successfully completes a backup. The file is placed in the backup's destination directory if this flag isn't present. "
+    "If this flag is given without a path the current directory and default name is used to find the file. If this flag points to a directory, "
+    "the directory is used with the default name to find the file. If this flag points to a file, that is used to find the file. If other flags are given along with this flag, "
+    "they will override the config set in the .bkp file.")
+)
+@click.option("--prev-backup-name",
+    help=("The name of the previous backup. If the previous backup did not have the default name, this can be "
+    "used to tell drive backup what it is. If not given or empty, Drive Backup will look for the default name from backup_name with the most recent date.")
+)
+@click.option("-s", "--source", help="The source folder on Google Drive to backup. If not given or empty, the default is everything on Google Drive.")
+@click.option("--source-id", help="The source folder id on Google Drive to backup. Default is 'root', which is everything on Google Drive.")
+@click.option("--google-doc-mimeType", type=click.Choice(['msoffice', 'pdf'], case_sensitive=False),
+    help="The desired mimeType conversion on all compatible Google Document types. Default is to convert documents to their 'msoffice' compatible type."
+)
+@click.option("--client-credentials", help="The path to a client credential file. This can possibly help download your files from Google Drive if you are having difficulties.")
+@click.option('--log-level', type=click.Choice(['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'], case_sensitive=False),
+    help="Set the logging level of detail. Default is 'INFO'"
+)
+@click.option("--log-filter/--no-log-filter", default=None, help="Only log messages generated from Google Drive Backup, ignore messages from other libraries. If neither option is given, all messages are logged.")
+@click.option("--log-changes/--no-log-changes", default=None, help="Only log files that need to be downloaded. If neither option is given, all files are logged.")
+@click.option("--log-path",
+    help=("The path to the log file. If not set or set with an empty path, the log file is stored alongside the directory where the backup is stored. If this flag points to a directory, the log file is stored in the "
+    "directory with the default name. If this flag points to a file, it is used to store the logs.")
+)
+def run_backup(**args):
+    args = { key:value for key, value in args.items() if value is not None }
     config.set_config(args)
 
     setup_logging()
@@ -113,3 +157,6 @@ def main():
     with progress_bar:
         progress.subscribe(update)
         run_drive_backup()
+
+def main():
+    cli(auto_envvar_prefix="DRIVE")
