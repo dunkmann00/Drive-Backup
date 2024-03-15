@@ -4,6 +4,8 @@ from pathlib import Path
 from importlib import resources
 import json, logging
 
+from googleapiclient import discovery
+
 from google.auth.transport.requests import Request
 from google.auth.exceptions import RefreshError
 from google.oauth2.credentials import Credentials
@@ -24,11 +26,19 @@ def get_user_credentials_path():
     credential_path = credential_dir / CREDENTIAL_FILE
     return credential_path
 
-def get_user_credentials():
+def get_new_user_credentials(credential_bytes):
+    if _get_new_user_credentials is not None:
+        return _get_new_user_credentials(credential_bytes)
+    flow = InstalledAppFlow.from_client_config(json.loads(credential_bytes), SCOPES)
+    credentials = flow.run_local_server(port=0)
+    return credentials
+
+def get_user_credentials(new_credential_okay=True):
     """Gets valid user credentials from storage.
 
     If nothing has been stored, or if the stored credentials are invalid,
-    the OAuth2 flow is completed to obtain the new credentials.
+    the OAuth2 flow is completed to obtain the new credentials if
+    'new_credential_okay' is True.
 
     Returns:
         Credentials, the obtained credential.
@@ -42,7 +52,7 @@ def get_user_credentials():
             user_credentials = Credentials.from_authorized_user_file(str(user_credential_path), SCOPES)
         except (json.JSONDecodeError, ValueError):
             logger.info("User credentials are invalid.")
-    if not user_credentials or not user_credentials.valid:
+    if new_credential_okay and (not user_credentials or not user_credentials.valid):
         if user_credentials and user_credentials.expired and user_credentials.refresh_token:
             try:
                 user_credentials.refresh(Request())
@@ -71,15 +81,34 @@ def get_user_credentials():
             logger.critical('Could not get user credentials.')
     return user_credentials
 
-def remove_user_credentials():
-    console.print("[cyan]Removing user credentials...", end="")
+def get_user_info(user_credentials):
+    service = discovery.build('drive', 'v3', credentials=user_credentials)
+    user_info = service.about().get(fields="user").execute()
+    return user_info
+
+def sign_out_user():
+    console.print("[cyan bold]Sign-out of Google Drive")
+    console.print("[green]Removing user credentials...", end="")
     credential_path = get_user_credentials_path()
     credential_path.unlink(missing_ok=True)
-    console.print("[cyan]done")
+    console.print("[green]done")
 
-def get_new_user_credentials(credential_bytes):
-    if _get_new_user_credentials is not None:
-        return _get_new_user_credentials(credential_bytes)
-    flow = InstalledAppFlow.from_client_config(json.loads(credential_bytes), SCOPES)
-    credentials = flow.run_local_server(port=0)
-    return credentials
+def sign_in_user():
+    console.print("[cyan bold]Sign-in to Google Drive")
+    console.print("[green]Attempting to get user credentials...")
+    user_credentials = get_user_credentials()
+    if not user_credentials:
+        console.print("[red]Unable to acquire user credentials")
+        return
+    user_info = get_user_info(user_credentials)
+    console.print("[green]Sign-in successful")
+    console.print(f"[bold cyan]Drive Account:[/] {user_info['user']['displayName']} {user_info['user']['emailAddress']}")
+
+def view_user_info():
+    console.print("[cyan bold]View User Info")
+    user_credentials = get_user_credentials(new_credential_okay=False)
+    if not user_credentials:
+        console.print("No user signed in.")
+        return
+    user_info = get_user_info(user_credentials)
+    console.print(f"[bold cyan]Drive Account:[/] {user_info['user']['displayName']} {user_info['user']['emailAddress']}")

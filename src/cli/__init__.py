@@ -1,4 +1,4 @@
-from src.core import config, run_drive_backup, remove_user_credentials, progress, console
+from src.core import config, run_drive_backup, sign_out_user, sign_in_user, view_user_info, progress, console
 from rich.progress import Progress, TextColumn, BarColumn, MofNCompleteColumn, TimeElapsedColumn, TaskProgressColumn
 from rich.table import Column
 from rich.text import Text
@@ -101,17 +101,21 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 def cli():
     pass
 
-@cli.group(help="Manage the user credential for Drive Backup.")
-def cred():
+@cli.group(help="Manage the user/user credential for Drive Backup.")
+def user():
     pass
 
-@cred.command("remove", help="Remove the user credential.")
-def remove_drive_credentials():
-    remove_user_credentials()
+@user.command("sign-out", help="Remove the user credential to sign out the user.")
+def sign_out_drive_crdentials():
+    sign_out_user()
 
-@cred.command("sign-in", help="Sign in to Google to acquire a user credential.")
+@user.command("sign-in", help="Sign in to Google to acquire a user credential.")
 def sign_in_drive_credentials():
-    pass
+    sign_in_user()
+
+@user.command("info", help="Show the current user's info.")
+def view_credential_info():
+    view_user_info()
 
 @cli.command("backup", help="Run a backup for your Google Drive.")
 @click.option("-d", "--destination", help="The destination in the file system where the backup should be stored. Default is the current directory.")
