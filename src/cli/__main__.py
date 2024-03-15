@@ -1,4 +1,10 @@
+import sys
 from . import main
 
-if __name__ == '__main__':
+rc = 1
+try:
     main()
+    rc = 0
+except Exception as e:
+    print('Error:', e, file=sys.stderr)
+sys.exit(rc)
