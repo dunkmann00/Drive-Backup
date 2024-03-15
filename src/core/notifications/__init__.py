@@ -2,7 +2,7 @@ from importlib import resources
 import platform, subprocess, os, logging
 
 def show_notification(title, body, image=None):
-    notification_dir = resources.files("src.notifications")
+    notification_dir = resources.files("src.core.notifications")
 
     try:
         if platform.system() == "Windows":
