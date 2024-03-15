@@ -50,6 +50,7 @@ def get_user_credentials():
                 logger.info("Credential refresh failed.")
         if not user_credentials or user_credentials and user_credentials.expired:
             client_credentials_path = config.client_credentials or (resources.files("src.resources") / DEFAULT_CLIENT_CREDENTIAL)
+            logger.info(f"Using client credential file at {client_credentials_path}")
             try:
                 client_credentials = client_credentials_path.read_bytes()
             except FileNotFoundError:
