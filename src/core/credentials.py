@@ -1,8 +1,8 @@
 from . import console, config
-from google_auth_oauthlib.flow import InstalledAppFlow
+from google_auth_oauthlib.flow import InstalledAppFlow, _RedirectWSGIApp
 from pathlib import Path
 from importlib import resources
-import json, logging
+import json, logging, wsgiref
 
 from googleapiclient import discovery
 
@@ -18,6 +18,7 @@ except ImportError:
 SCOPES = ['https://www.googleapis.com/auth/drive.readonly']
 DEFAULT_CLIENT_CREDENTIAL = "credentials.json"
 CREDENTIAL_FILE = 'drive-backup-user-cred.json'
+AUTH_SUCCESS_FILE = 'authentication_success.html'
 
 def get_user_credentials_path():
     credential_dir = Path("~/.credentials").expanduser()
@@ -27,10 +28,12 @@ def get_user_credentials_path():
     return credential_path
 
 def get_new_user_credentials(credential_bytes):
+    success_file_path = resources.files("src.resources") / AUTH_SUCCESS_FILE
+    success_message = success_file_path.read_text()
     if _get_new_user_credentials is not None:
-        return _get_new_user_credentials(credential_bytes)
+        return _get_new_user_credentials(credential_bytes, success_message)
     flow = InstalledAppFlow.from_client_config(json.loads(credential_bytes), SCOPES)
-    credentials = flow.run_local_server(port=0)
+    credentials = flow.run_local_server(port=0, success_message=success_message)
     return credentials
 
 def get_user_credentials(new_credential_okay=True):
@@ -112,3 +115,10 @@ def view_user_info():
         return
     user_info = get_user_info(user_credentials)
     console.print(f"[bold cyan]Drive Account:[/] {user_info['user']['displayName']} {user_info['user']['emailAddress']}")
+
+def wsgiapp_call(self, environ, start_response):
+    start_response("200 OK", [("Content-type", "text/html; charset=utf-8")])
+    self.last_request_uri = wsgiref.util.request_uri(environ)
+    return [self._success_message.encode("utf-8")]
+
+_RedirectWSGIApp.__call__ = wsgiapp_call
