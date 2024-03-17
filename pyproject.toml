@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools >= 69.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "drive-backup"
+version = "2.0.0"
+requires-python = ">=3.11"
+authors = [{ name = "George Waters", email = "gwatersdev@gmail.com" }]
+description = "Backup your Google Drive files locally."
+readme = "README.md"
+license = { file = "LICENSE" }
+keywords = ["Google Drive", "backup"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Topic :: System :: Archiving :: Backup",
+    "Topic :: Utilities"
+]
+
+[project.urls]
+Homepage = "https://www.georgeh2os.com/Drive-Backup/"
+Repository = "https://github.com/dunkmann00/Drive-Backup"
+Issues = "https://github.com/dunkmann00/Drive-Backup/issues"
