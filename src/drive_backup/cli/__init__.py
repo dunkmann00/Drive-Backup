@@ -1,4 +1,4 @@
-from src.core import config, run_drive_backup, sign_out_user, sign_in_user, view_user_info, progress, console
+from src.drive_backup.core import config, run_drive_backup, sign_out_user, sign_in_user, view_user_info, progress, console
 from rich.progress import Progress, TextColumn, BarColumn, MofNCompleteColumn, TimeElapsedColumn, TaskProgressColumn
 from rich.table import Column
 from rich.text import Text
@@ -98,6 +98,7 @@ click.Context.formatter_class = HelpFormatter
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
 @click.group(context_settings=CONTEXT_SETTINGS)
+@click.version_option(package_name="drive-backup", message=f"{click.style('%(prog)s', bold=True)} (version {click.style('%(version)s', fg='cyan')})")
 def cli():
     pass
 
@@ -163,4 +164,10 @@ def run_backup(**args):
         run_drive_backup()
 
 def main():
-    cli(auto_envvar_prefix="DRIVE")
+    rc = 1
+    try:
+        cli(auto_envvar_prefix="DRIVE")
+        rc = 0
+    except Exception as e:
+        print('Error:', e, file=sys.stderr)
+    return rc
