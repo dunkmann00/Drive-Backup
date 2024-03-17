@@ -165,4 +165,4 @@ cython_debug/
 #.idea/
 
 # Custom negate files/directories
-!src/core/notifications/mac/build/
+!src/drive_backup/core/notifications/mac/build/
