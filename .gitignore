@@ -1,6 +1,6 @@
 # Custom files/directories
 dev/
-drive-backup-icon.psd
+*.psd
 credentials_personal.json
 
 # Byte-compiled / optimized / DLL files
@@ -165,4 +165,4 @@ cython_debug/
 #.idea/
 
 # Custom negate files/directories
-!notifications/mac/build/
+!src/core/notifications/mac/build/
