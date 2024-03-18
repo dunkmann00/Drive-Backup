@@ -98,7 +98,7 @@ click.Context.formatter_class = HelpFormatter
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
 @click.group(context_settings=CONTEXT_SETTINGS)
-@click.version_option(package_name="drive-backup", message=f"{click.style('%(prog)s', bold=True)} (version {click.style('%(version)s', fg='cyan')})")
+@click.version_option(package_name="drive-backup", message=f"{click.style('Drive Backup', bold=True)} (version {click.style('%(version)s', fg='cyan')})")
 def cli():
     pass
 
