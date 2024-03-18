@@ -26,3 +26,25 @@ classifiers = [
 Homepage = "https://www.georgeh2os.com/Drive-Backup/"
 Repository = "https://github.com/dunkmann00/Drive-Backup"
 Issues = "https://github.com/dunkmann00/Drive-Backup/issues"
+
+[project.scripts]
+dbackup = "drive_backup.cli:main"
+
+[tool.poetry]
+package-mode = false
+
+[tool.poetry.dependencies]
+python = ">=3.11"
+google-api-python-client = ">=2.122.0"
+google-auth-httplib2 = ">=0.2.0"
+google-auth-oauthlib = ">=1.2.0"
+rich = ">=13.7.1"
+pathvalidate = ">=3.2.0"
+cryptography = ">=42.0.5"
+click = ">=8.1.7"
+
+[tool.poetry.group.dev.dependencies]
+tomlkit = "^0.12.4"
+
+[tool.poetry.group.build.dependencies]
+build = "^1.1.1"
