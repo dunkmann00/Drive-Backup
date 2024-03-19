@@ -38,6 +38,7 @@ rich = ">=13.7.1"
 pathvalidate = ">=3.2.0"
 cryptography = ">=42.0.5"
 click = ">=8.1.7"
+drive-backup-credentials = ">=0.2.1"
 
 [tool.poetry.group.dev.dependencies]
 tomlkit = ">=0.12.4"

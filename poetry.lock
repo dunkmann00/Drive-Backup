@@ -265,6 +265,23 @@ test = ["certifi", "pretend", "pytest (>=6.2.0)", "pytest-benchmark", "pytest-co
 test-randomorder = ["pytest-randomly"]
 
 [[package]]
+name = "drive-backup-credentials"
+version = "0.2.1"
+description = "Drive Backup credential tool module."
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "drive_backup_credentials-0.2.1-cp311-cp311-macosx_10_9_universal2.whl", hash = "sha256:6dc29407e8904c1f41b2a80f84fc9e4be7d9454e91dd686f2ca8aa0323f40057"},
+    {file = "drive_backup_credentials-0.2.1-cp311-cp311-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:645e1c49f0710c147687e5d5b76042f2cc9af2aaf9482ad91f18414fa81cb146"},
+    {file = "drive_backup_credentials-0.2.1-cp311-cp311-musllinux_1_1_x86_64.whl", hash = "sha256:498b9856a6df48e3bdd15c38d46ffe8bc4c3c95f5f23a758cba53d488c828066"},
+    {file = "drive_backup_credentials-0.2.1-cp311-cp311-win_amd64.whl", hash = "sha256:595e488cc9131a2dbe7b999c3d63bd69213959860282cb86e4d43d50d373f99e"},
+]
+
+[package.dependencies]
+cryptography = ">=42.0.0"
+google-auth-oauthlib = ">=1.0.0"
+
+[[package]]
 name = "google-api-core"
 version = "2.17.1"
 description = "Google API client core library"
@@ -665,4 +682,4 @@ zstd = ["zstandard (>=0.18.0)"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11"
-content-hash = "09ebd7a311621faed42474bcf0f32edc5dea14f246c2ec64d13520f600fa6bbf"
+content-hash = "81939d60b793a8721ef53e020808591b36cc3cf60ec528f8845d61b1c9ab67bf"
