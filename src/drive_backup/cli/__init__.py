@@ -1,4 +1,4 @@
-from src.drive_backup.core import config, run_drive_backup, sign_out_user, sign_in_user, view_user_info, progress, console
+from drive_backup.core import config, run_drive_backup, sign_out_user, sign_in_user, view_user_info, progress, console
 from rich.progress import Progress, TextColumn, BarColumn, MofNCompleteColumn, TimeElapsedColumn, TaskProgressColumn
 from rich.table import Column
 from rich.text import Text

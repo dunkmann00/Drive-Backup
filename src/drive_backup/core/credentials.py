@@ -28,7 +28,7 @@ def get_user_credentials_path():
     return credential_path
 
 def get_new_user_credentials(credential_bytes):
-    success_file_path = resources.files("src.resources") / AUTH_SUCCESS_FILE
+    success_file_path = resources.files("drive_backup.resources") / AUTH_SUCCESS_FILE
     success_message = success_file_path.read_text()
     if _get_new_user_credentials is not None:
         return _get_new_user_credentials(credential_bytes, success_message)
@@ -62,7 +62,7 @@ def get_user_credentials(new_credential_okay=True):
             except RefreshError:
                 logger.info("Credential refresh failed.")
         if not user_credentials or user_credentials and user_credentials.expired:
-            client_credentials_path = config.client_credentials or (resources.files("src.resources") / DEFAULT_CLIENT_CREDENTIAL)
+            client_credentials_path = config.client_credentials or (resources.files("drive_backup.resources") / DEFAULT_CLIENT_CREDENTIAL)
             logger.info(f"Using client credential file at {client_credentials_path}")
             try:
                 client_credentials = client_credentials_path.read_bytes()

@@ -2,12 +2,12 @@ from importlib import resources
 import platform, subprocess, os, logging
 
 def show_notification(title, body, image=None):
-    notification_dir = resources.files("src.core.notifications")
+    notification_dir = resources.files("drive_backup.core.notifications")
 
     try:
         if platform.system() == "Windows":
             if image is None:
-                image = resources.files("src.resources") / "drive-backup-icon.png"
+                image = resources.files("drive_backup.resources") / "drive-backup-icon.png"
             win_drive_notification = notification_dir / "windows" / "build" / "Drive Backup Notifications.exe"
             subprocess.Popen([win_drive_notification, "--title", title, "--body", body, "--image", image])
         elif platform.system() == "Darwin":
