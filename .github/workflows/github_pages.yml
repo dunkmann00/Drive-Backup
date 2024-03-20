@@ -1,6 +1,7 @@
 name: Github Pages
 
 on:
+  push:
   # Runs when a release is published
   release:
     types: [released]
