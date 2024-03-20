@@ -4,7 +4,7 @@
 
 # Drive Backup
 
-**A simple way to backup your Google Drive locally.**
+### A simple way to backup your Google Drive locally.
 
 [![PyPI - Version](https://img.shields.io/pypi/v/drive-backup)](https://pypi.org/project/drive-backup/)
 [![GitHub Release](https://img.shields.io/github/v/release/dunkmann00/drive-backup?logo=github)](https://github.com/dunkmann00/Drive-Backup-Credentials/releases/latest)

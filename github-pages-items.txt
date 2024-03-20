@@ -1,4 +1,4 @@
 README.md
 Privacy.md
-LICENSE
+LICENSE.md
 src/drive_backup/resources/drive-backup-icon.png
