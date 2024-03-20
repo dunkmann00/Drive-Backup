@@ -2,6 +2,7 @@
 dev/
 *.psd
 credentials_personal.json
+*drive-backup-icon-large.png
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
