@@ -1,4 +1,4 @@
-<div align="center">
+<div align="center" markdown="1">
 
 [![Drive Backup Logo](https://www.georgeh2os.com/Drive-Backup/drive-backup-icon.png)](./)
 
