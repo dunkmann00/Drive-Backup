@@ -1,17 +1,17 @@
-<div align="center">
+<div align="center" markdown="1">
 
-[![Drive Backup Logo](https://www.georgeh2os.com/Drive-Backup/drive-backup-icon.png)](./)
+[![Drive Backup Logo](src/drive_backup/resources/drive-backup-icon.png)]()
 
 # Drive Backup
 
-**A simple way to backup your Google Drive locally.**
+### A simple way to backup your Google Drive locally.
 
 [![PyPI - Version](https://img.shields.io/pypi/v/drive-backup)](https://pypi.org/project/drive-backup/)
 [![GitHub Release](https://img.shields.io/github/v/release/dunkmann00/drive-backup?logo=github)](https://github.com/dunkmann00/Drive-Backup-Credentials/releases/latest)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/drive-backup)](https://pypi.org/project/drive-backup/)
 [![Release - Workflow](https://github.com/dunkmann00/Drive-Backup/actions/workflows/release.yml/badge.svg?branch=main)](https://github.com/dunkmann00/Drive-Backup/actions/workflows/release.yml)
 [![Github Pages - Workflow](https://github.com/dunkmann00/Drive-Backup/actions/workflows/github_pages.yml/badge.svg?branch=main)](https://github.com/dunkmann00/Drive-Backup/actions/workflows/github_pages.yml)
-[![License](https://img.shields.io/badge/License-MIT-maroon)](./LICENSE)
+[![License](https://img.shields.io/badge/License-MIT-maroon)](LICENSE.md)
 
 </div>
 
@@ -90,8 +90,8 @@ in), a browser window will open asking you to sign in to Google and to give
 Drive Backup permission to download files from Google Drive.
 
 Below are some common examples to show how Drive Backup works. To see more info
-about all of the options and commands run `dbackup -h` or `dbackup [command]
--h`.
+about all of the options and commands run `dbackup -h` or `dbackup [command] -h`
+.
 
 Backup your entire Google Drive into the current directory. Drive Backup will
 make a directory in your current directory titled `Google Drive Backup {date}`
@@ -170,4 +170,4 @@ dbackup backup --client-credentials path/to/your/personal/credentials.json
 Google Drive is a trademark of Google Inc. Use of this trademark is subject to
 Google Permissions.
 
-2024 George Waters under the MIT License. See [LICENSE](./LICENSE) for details.
+2024 George Waters under the MIT License. See [LICENSE](LICENSE.md) for details.

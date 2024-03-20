@@ -1,6 +1,7 @@
 name: Github Pages
 
 on:
+  push:
   # Runs when a release is published
   release:
     types: [released]
@@ -28,15 +29,21 @@ jobs:
       name: github-pages
       url: ${{ steps.gh_pages.outputs.page_url }}
     env:
-      GHP_SOURCE_DIR: gh_pages_source
-      GHP_ITEMS_FILE: github-pages-items.txt
+      GHP_SOURCE_DIR: pages
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Gather items for Github Pages
+      - name: Prep For Pages
         run: |
-          mkdir $GHP_SOURCE_DIR
-          cat $GHP_ITEMS_FILE | xargs -I % cp % $GHP_SOURCE_DIR
+          # Copy md files into Pages directory
+          cp {README.md,Privacy.md,LICENSE.md} $GHP_SOURCE_DIR
+          # Copy the icon into an images sub-directory
+          mkdir $GHP_SOURCE_DIR/images
+          cp src/drive_backup/resources/drive-backup-icon.png $GHP_SOURCE_DIR/images
+          # Update the icon links in the README
+          sed -i 's#src/drive_backup/resources/drive-backup-icon.png#images/drive-backup-icon.png#g' $GHP_SOURCE_DIR/README.md
+          # Update License links
+          sed -i 's#LICENSE.md#LICENSE#g' $GHP_SOURCE_DIR/README.md
       - name: Build & Deploy
         id: gh_pages
         uses: dunkmann00/jekyll-v4-gh-pages@v1
