@@ -1,5 +1,6 @@
 include:
   - README.md
+  - index.html
   - Privacy.md
   - LICENSE.md
   - drive-backup-icon.png
