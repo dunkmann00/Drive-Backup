@@ -1,6 +1,6 @@
 <div align="center" markdown="1">
 
-[![Drive Backup Logo](https://www.georgeh2os.com/Drive-Backup/drive-backup-icon.png)]()
+[![Drive Backup Logo](src/drive_backup/resources/drive-backup-icon.png)]()
 
 # Drive Backup
 
@@ -11,7 +11,7 @@
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/drive-backup)](https://pypi.org/project/drive-backup/)
 [![Release - Workflow](https://github.com/dunkmann00/Drive-Backup/actions/workflows/release.yml/badge.svg?branch=main)](https://github.com/dunkmann00/Drive-Backup/actions/workflows/release.yml)
 [![Github Pages - Workflow](https://github.com/dunkmann00/Drive-Backup/actions/workflows/github_pages.yml/badge.svg?branch=main)](https://github.com/dunkmann00/Drive-Backup/actions/workflows/github_pages.yml)
-[![License](https://img.shields.io/badge/License-MIT-maroon)](https://github.com/dunkmann00/Drive-Backup/blob/master/LICENSE)
+[![License](https://img.shields.io/badge/License-MIT-maroon)](LICENSE.md)
 
 </div>
 
@@ -170,4 +170,4 @@ dbackup backup --client-credentials path/to/your/personal/credentials.json
 Google Drive is a trademark of Google Inc. Use of this trademark is subject to
 Google Permissions.
 
-2024 George Waters under the MIT License. See [LICENSE](https://github.com/dunkmann00/Drive-Backup/blob/master/LICENSE) for details.
+2024 George Waters under the MIT License. See [LICENSE](LICENSE.md) for details.

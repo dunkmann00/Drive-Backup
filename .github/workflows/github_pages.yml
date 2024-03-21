@@ -28,16 +28,15 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.gh_pages.outputs.page_url }}
-    env:
-      GHP_SOURCE_DIR: gh_pages_source
-      GHP_ITEMS_FILE: github-pages-items.txt
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Gather items for Github Pages
+      - name: Prep For Pages
         run: |
-          mkdir $GHP_SOURCE_DIR
-          cat $GHP_ITEMS_FILE | xargs -I % cp % $GHP_SOURCE_DIR
+          # Copy the icon into the root
+          cp src/drive_backup/resources/drive-backup-icon.png .
+          # Update the icon links in the README
+          sed -i 's#src/drive_backup/resources/drive-backup-icon.png#drive-backup-icon.png#g' README.md
       - name: Build & Deploy
         id: gh_pages
         uses: dunkmann00/jekyll-v4-gh-pages@v1

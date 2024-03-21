@@ -1,3 +1,0 @@
-README.md
-Privacy.md
-src/drive_backup/resources/drive-backup-icon.png
