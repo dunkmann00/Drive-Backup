@@ -1,4 +1,4 @@
-# Privacy Policy
+## Privacy Policy
 
 Drive Backup requests access to read all files in your Google Drive. It does
 this so it can download any files you instruct it to, onto your local
