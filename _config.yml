@@ -1,4 +1,4 @@
-exclude: [*]
+exclude: ["*"]
 include:
   - README.md
   - Privacy.md
