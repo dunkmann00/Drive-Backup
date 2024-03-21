@@ -41,7 +41,7 @@ jobs:
           mkdir $GHP_SOURCE_DIR/images
           cp src/drive_backup/resources/drive-backup-icon.png $GHP_SOURCE_DIR/images
           # Update the icon links in the README
-          sed -i 's#src/drive_backup/resources/drive-backup-icon.png#drive-backup-icon.png#g' $GHP_SOURCE_DIR/README.md
+          sed -i 's#src/drive_backup/resources/drive-backup-icon.png#images/drive-backup-icon.png#g' $GHP_SOURCE_DIR/README.md
       - name: Build & Deploy
         id: gh_pages
         uses: dunkmann00/jekyll-v4-gh-pages@v1
