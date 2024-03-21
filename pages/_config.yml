@@ -1,9 +1,5 @@
 include:
   - README.md
-  - index.html
   - Privacy.md
   - LICENSE.md
   - drive-backup-icon.png
-
-optional_front_matter:
-  remove_originals: true
