@@ -2,3 +2,6 @@ include:
   - README.md
   - Privacy.md
   - LICENSE.md
+
+primer:
+  home_heading: false
