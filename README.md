@@ -90,8 +90,8 @@ in), a browser window will open asking you to sign in to Google and to give
 Drive Backup permission to download files from Google Drive.
 
 Below are some common examples to show how Drive Backup works. To see more info
-about all of the options and commands run `dbackup -h` or `dbackup [command]
--h`.
+about all of the options and commands run `dbackup -h` or `dbackup [command] -h`
+.
 
 Backup your entire Google Drive into the current directory. Drive Backup will
 make a directory in your current directory titled `Google Drive Backup {date}`
