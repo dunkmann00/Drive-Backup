@@ -15,6 +15,7 @@ jobs:
           python-version: "3.11"
       - name: Install Poetry & download charset_normalizer
         run: |
+          brew install pipx
           pipx install poetry
           poetry config virtualenvs.in-project true
           printf '[tool.poetry]\npackage-mode = false\n\n[tool.poetry.dependencies]\npython = ">=3.11"\n' > pyproject.toml
