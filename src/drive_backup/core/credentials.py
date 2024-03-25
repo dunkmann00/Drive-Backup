@@ -96,8 +96,10 @@ def sign_out_user():
     credential_path.unlink(missing_ok=True)
     console.print("[green]done")
 
-def sign_in_user():
+def sign_in_user(client_credentials=None):
     console.print("[cyan bold]Sign-in to Google Drive")
+    if client_credentials is not None:
+        config.client_credentials = Path(client_credentials).resolve()
     console.print("[green]Attempting to get user credentials...")
     user_credentials = get_user_credentials()
     if not user_credentials:

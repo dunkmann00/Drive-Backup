@@ -111,8 +111,9 @@ def sign_out_drive_crdentials():
     sign_out_user()
 
 @user.command("sign-in", help="Sign in to Google to acquire a user credential.")
-def sign_in_drive_credentials():
-    sign_in_user()
+@click.option("--client-credentials", help="The path to a client credential file. This can possibly help download your files from Google Drive if you are having difficulties.")
+def sign_in_drive_credentials(client_credentials):
+    sign_in_user(client_credentials)
 
 @user.command("info", help="Show the current user's info.")
 def view_credential_info():
