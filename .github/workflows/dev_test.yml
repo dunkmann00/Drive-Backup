@@ -1,0 +1,27 @@
+name: Universal2 wheel test
+
+on:
+  push:
+
+
+jobs:
+  test:
+    name: Test Poeetry Universal2 wheel
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install Poetry & download charset_normalizer
+        run: |
+          pipx install poetry
+          poetry config virtualenvs.in-project true
+          echo "[tool.poetry]\npackage-mode = false" > pyproject.toml
+          poetry env use python
+          poetry add charset_normalizer
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          path: .venv/
+          retention-days: 1
