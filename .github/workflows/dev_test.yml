@@ -17,7 +17,7 @@ jobs:
         run: |
           pipx install poetry
           poetry config virtualenvs.in-project true
-          echo "[tool.poetry]\npackage-mode = false" > pyproject.toml
+          echo "[tool.poetry]\npackage-mode = false\n" > pyproject.toml
           poetry env use python
           poetry add charset_normalizer
       - name: Upload Artifact
