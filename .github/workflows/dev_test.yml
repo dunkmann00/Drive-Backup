@@ -1,0 +1,34 @@
+name: Universal2 wheel test
+
+on:
+  push:
+
+
+jobs:
+  test:
+    name: Test Poeetry Universal2 wheel
+    runs-on: macos-14
+    steps:
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install pipx
+        shell: bash
+        run: |
+          brew install pipx
+          echo "/Users/runner/.local/bin" >> $GITHUB_PATH
+      - name: Install Poetry & download charset_normalizer
+        shell: bash
+        run: |
+          pipx install poetry
+          poetry config virtualenvs.in-project true
+          printf '[tool.poetry]\npackage-mode = false\n\n[tool.poetry.dependencies]\npython = ">=3.11"\n' > pyproject.toml
+          cat pyproject.toml
+          poetry env use python
+          poetry add charset_normalizer
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          path: .venv/
+          retention-days: 1
