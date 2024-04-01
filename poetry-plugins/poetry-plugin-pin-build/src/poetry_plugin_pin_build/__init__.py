@@ -15,17 +15,17 @@ from poetry_plugin_export.walker import get_project_dependency_packages
 from packaging.utils import canonicalize_name
 
 
-NAME = "poetry-plugin-lock-build"
+NAME = "poetry-plugin-pin-build"
 
-class LockBuildPlugin(ApplicationPlugin):
+class PinBuildPlugin(ApplicationPlugin):
     def activate(self, application: Application):
         # Only run if the plugin is listed in the pyproject.toml
         if application.poetry.pyproject.data.get("tool", {}).get(NAME) is not None:
             application.event_dispatcher.add_listener(
-                COMMAND, self.lock_build
+                COMMAND, self.pin_build
             )
 
-    def lock_build(
+    def pin_build(
         self,
         event: ConsoleCommandEvent,
         event_name: str,
