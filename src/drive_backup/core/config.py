@@ -43,6 +43,7 @@ class Config:
                 self.log_path = self.log_path / DEFAULT_LOG
         else:
             self.log_path = None
+        self.notifications = bool(args.get("notifications", True))
         self.backup_date = datetime.fromisoformat(args["backup_date"]) if "backup_date" in args else None
 
     def set_config(self, args):
@@ -66,6 +67,7 @@ class Config:
             "log_filter": int(self.log_filter),
             "log_changes": int(self.log_changes),
             "log_path": str(self.log_path) if self.log_path is not None else None,
+            "notifications": int(self.notifications),
             "backup_date": datetime.now(timezone.utc).isoformat()
         }
 

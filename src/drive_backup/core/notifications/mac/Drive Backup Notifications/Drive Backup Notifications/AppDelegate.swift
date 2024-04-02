@@ -13,7 +13,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let center = UNUserNotificationCenter.current()
         
         let _ = try? await center.requestAuthorization(options: [.alert, .sound])
-
+        
+        if UserDefaults.standard.bool(forKey: "authorization") {
+            return
+        }
+        
         let settings = await center.notificationSettings()
 
         guard (settings.authorizationStatus == .authorized) else { return }

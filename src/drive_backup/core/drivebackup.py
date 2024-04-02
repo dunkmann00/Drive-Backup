@@ -420,7 +420,8 @@ def stop_backup():
     logger = logging.getLogger(__name__)
     logger.critical('Could not complete backup. Check terminal and/or log file for more info.')
     progress.state = progress.State.STOP
-    show_notification(title=APPLICATION_NAME, body="There was a problem completing the backup. Check the terminal/log for more info.")
+    if config.notifications:
+        show_notification(title=APPLICATION_NAME, body="There was a problem completing the backup. Check the terminal/log for more info.")
     sys.exit(1)
 
 def get_user():
@@ -511,4 +512,5 @@ def run_drive_backup():
     progress_update(f'[bold cyan]Backup Complete!')
     config.store_config()
 
-    show_notification(title=APPLICATION_NAME, body="Drive Backup is complete!")
+    if config.notifications:
+        show_notification(title=APPLICATION_NAME, body="Drive Backup is complete!")

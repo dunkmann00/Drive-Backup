@@ -1,7 +1,8 @@
-from drive_backup.core import config, run_drive_backup, sign_out_user, sign_in_user, view_user_info, progress, console
+from drive_backup.core import console, config, progress, run_drive_backup, sign_out_user, sign_in_user, view_user_info, get_macos_notification_authorization
 from rich.progress import Progress, TextColumn, BarColumn, MofNCompleteColumn, TimeElapsedColumn, TaskProgressColumn
 from rich.table import Column
 from rich.text import Text
+import platform
 import click
 import logging, sys
 
@@ -154,11 +155,15 @@ def view_credential_info():
     help=("The path to the log file. If not set or set with an empty path, the log file is stored alongside the directory where the backup is stored. If this flag points to a directory, the log file is stored in the "
     "directory with the default name. If this flag points to a file, it is used to store the logs.")
 )
+@click.option("--notifications/--no-notifications", default=None, help="Will (not) trigger notifications on completion or failure. If neither option is given, notifications will be triggered.")
 def run_backup(**args):
     args = { key:value for key, value in args.items() if value is not None }
     config.set_config(args)
 
     setup_logging()
+
+    if platform.system() == "Darwin" and config.notifications:
+        get_macos_notification_authorization()
 
     with progress_bar:
         progress.subscribe(update)
