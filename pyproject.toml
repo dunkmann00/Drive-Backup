@@ -22,6 +22,12 @@ classifiers = [
     "Topic :: System :: Archiving :: Backup",
     "Topic :: Utilities"
 ]
+exclude = ["src/drive_backup/core/notifications/*/Drive Backup Notifications"]
+include = [
+    { path = "src/drive_backup/core/notifications/mac/build/Drive Backup Notifications.app", format = ["sdist", "wheel"] },
+    { path = "src/drive_backup/core/notifications/windows/build/Drive Backup Notifications.exe", format = ["sdist", "wheel"] },
+    { path = "Privacy.md", format = ["sdist"] }
+]
 
 [tool.poetry.urls]
 Issues = "https://github.com/dunkmann00/Drive-Backup/issues"
@@ -30,7 +36,7 @@ Issues = "https://github.com/dunkmann00/Drive-Backup/issues"
 dbackup = "drive_backup.cli:main"
 
 [tool.poetry.dependencies]
-python = ">=3.11"
+python = ">=3.11,<3.13"
 google-api-python-client = ">=2.122.0"
 google-auth-httplib2 = ">=0.2.0"
 google-auth-oauthlib = ">=1.2.0"
@@ -42,3 +48,9 @@ drive-backup-credentials = ">=0.2.1"
 
 [tool.poetry.group.dev.dependencies]
 tomlkit = ">=0.12.4"
+pyinstaller = "^6.5.0"
+
+[tool.poetry-plugin-universal2-wheel]
+cache-wheels = true
+
+[tool.poetry-plugin-pin-build]
