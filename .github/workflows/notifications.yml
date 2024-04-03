@@ -1,0 +1,68 @@
+name: Notifications Build
+
+on:
+  push:
+
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+env:
+  PROJECT_NAME: Drive Backup Notifications
+
+jobs:
+  mac_notifications:
+    name: Build macOS Notification App
+    runs-on: macos-14
+    defaults:
+      run:
+        shell: bash
+        working-directory: ./src/drive-backup/core/notifications/mac
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup keychain (macOS only)
+        if: runner.os == 'macOS'
+        env:
+          MACOS_CERTIFICATE: ${{ secrets.PROD_MACOS_CERTIFICATE }}
+          MACOS_CERTIFICATE_PWD: ${{ secrets.PROD_MACOS_CERTIFICATE_PWD }}
+          MACOS_CI_KEYCHAIN_PWD: ${{ secrets.PROD_MACOS_CI_KEYCHAIN_PWD }}
+        run: |
+          # Based on blog post by Federico Terzi & Localazy:
+          # https://federicoterzi.com/blog/automatic-code-signing-and-notarization-for-macos-apps-using-github-actions/
+          # https://localazy.com/blog/how-to-automatically-sign-macos-apps-using-github-actions
+          # Also based on Github's guide for signing Xcode applications
+          # https://docs.github.com/en/actions/deployment/deploying-xcode-applications/installing-an-apple-certificate-on-macos-runners-for-xcode-development
+
+          # Make keychain temporary directory
+          mkdir $RUNNER_TEMP/keychain
+
+          # Create path variables
+          CERTIFICATE_PATH=$RUNNER_TEMP/keychain/build_certificate.p12
+          KEYCHAIN_PATH=$RUNNER_TEMP/keychain/build.keychain
+
+          # Turn our base64-encoded certificate back to a regular .p12 file
+          echo $MACOS_CERTIFICATE | base64 --decode > $CERTIFICATE_PATH
+
+          # We need to create a new keychain, otherwise using the certificate will prompt
+          # with a UI dialog asking for the certificate password, which we can't
+          # use in a headless CI environment
+
+          # Create keychain
+          security create-keychain -p "$MACOS_CI_KEYCHAIN_PWD" $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security default-keychain -s $KEYCHAIN_PATH
+          security unlock-keychain -p "$MACOS_CI_KEYCHAIN_PWD" $KEYCHAIN_PATH
+
+          # Import certificate to keychain
+          security import $CERTIFICATE_PATH -k $KEYCHAIN_PATH -P "$MACOS_CERTIFICATE_PWD" -T /usr/bin/codesign
+          security list-keychain -d user -s $KEYCHAIN_PATH
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$MACOS_CI_KEYCHAIN_PWD" $KEYCHAIN_PATH
+      - name: Build Xcode Archive
+        run: xcodebuild -project "$PROJECT_NAME/$PROJECT_NAME.xcodeproj" -scheme "$PROJECT_NAME" -sdk macosx -destination 'generic/platform=macOS' -archivePath "./build/$PROJECT_NAME.xcarchive" clean archive
+      - name: Export Xcode Archive
+        run: xcodebuild -exportArchive -archivePath "./build/$PROJECT_NAME.xcarchive" -exportOptionsPlist ExportOptions.plist -exportPath ./dist
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          path: "./src/drive_backup/core/notifications/mac/dist/${{ env.PROJECT_NAME }}.app"
