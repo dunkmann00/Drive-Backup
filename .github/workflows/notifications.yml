@@ -17,16 +17,17 @@ jobs:
     defaults:
       run:
         shell: bash
-        working-directory: ./src/drive-backup/core/notifications/mac
+        working-directory: ./src/drive_backup/core/notifications/mac
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Setup keychain (macOS only)
+      - name: Setup keychain
         if: runner.os == 'macOS'
         env:
           MACOS_CERTIFICATE: ${{ secrets.PROD_MACOS_CERTIFICATE }}
           MACOS_CERTIFICATE_PWD: ${{ secrets.PROD_MACOS_CERTIFICATE_PWD }}
           MACOS_CI_KEYCHAIN_PWD: ${{ secrets.PROD_MACOS_CI_KEYCHAIN_PWD }}
+        working-directory: .
         run: |
           # Based on blog post by Federico Terzi & Localazy:
           # https://federicoterzi.com/blog/automatic-code-signing-and-notarization-for-macos-apps-using-github-actions/
