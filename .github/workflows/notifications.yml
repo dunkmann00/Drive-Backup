@@ -66,4 +66,5 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          path: "./src/drive_backup/core/notifications/mac/dist/${{ env.PROJECT_NAME }}.app"
+          path: "./src/drive_backup/core/notifications/mac/dist/*.app"
+          retention-days: 1
