@@ -64,7 +64,7 @@ jobs:
       - name: Export Xcode Archive
         run: xcodebuild -exportArchive -archivePath "./build/$PROJECT_NAME.xcarchive" -exportOptionsPlist ExportOptions.plist -exportPath ./dist
       - name: Zip App Bundle
-        run: ditto -c -k --keepParent "./dist/$PROJECT_NAME.app" "$PROJECT_NAME-macos.zip"
+        run: ditto -c -k --keepParent "./dist/$PROJECT_NAME.app" "./dist/$PROJECT_NAME-macos.zip"
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
