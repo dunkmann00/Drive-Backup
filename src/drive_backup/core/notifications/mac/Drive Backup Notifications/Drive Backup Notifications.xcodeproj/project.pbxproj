@@ -10,6 +10,8 @@
 		0559A2C02B883AAA00FA7FAD /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0559A2BF2B883AAA00FA7FAD /* AppDelegate.swift */; };
 		0559A2C42B883AAC00FA7FAD /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 0559A2C32B883AAC00FA7FAD /* Assets.xcassets */; };
 		0559A2CF2B883AE700FA7FAD /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0559A2CE2B883AE700FA7FAD /* main.swift */; };
+		05E1B4082BBF3F4F00BD6348 /* ArgumentParser in Frameworks */ = {isa = PBXBuildFile; productRef = 05E1B4072BBF3F4F00BD6348 /* ArgumentParser */; };
+		05E1B40A2BBF40D000BD6348 /* Notify.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05E1B4092BBF40D000BD6348 /* Notify.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -19,6 +21,7 @@
 		0559A2CE2B883AE700FA7FAD /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		0559A2D02B885A4300FA7FAD /* Steps to recreate.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Steps to recreate.txt"; sourceTree = "<group>"; };
 		05E1B4052BB79C2300BD6348 /* Drive_Backup_Notifications.entitlements */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.entitlements; path = Drive_Backup_Notifications.entitlements; sourceTree = "<group>"; };
+		05E1B4092BBF40D000BD6348 /* Notify.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Notify.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -26,6 +29,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				05E1B4082BBF3F4F00BD6348 /* ArgumentParser in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -53,6 +57,7 @@
 			children = (
 				0559A2BF2B883AAA00FA7FAD /* AppDelegate.swift */,
 				0559A2CE2B883AE700FA7FAD /* main.swift */,
+				05E1B4092BBF40D000BD6348 /* Notify.swift */,
 				0559A2D02B885A4300FA7FAD /* Steps to recreate.txt */,
 				0559A2C32B883AAC00FA7FAD /* Assets.xcassets */,
 				05E1B4052BB79C2300BD6348 /* Drive_Backup_Notifications.entitlements */,
@@ -76,6 +81,9 @@
 			dependencies = (
 			);
 			name = "Drive Backup Notifications";
+			packageProductDependencies = (
+				05E1B4072BBF3F4F00BD6348 /* ArgumentParser */,
+			);
 			productName = "Drive Backup Notifications";
 			productReference = 0559A2BC2B883AAA00FA7FAD /* Drive Backup Notifications.app */;
 			productType = "com.apple.product-type.application";
@@ -104,6 +112,9 @@
 				Base,
 			);
 			mainGroup = 0559A2B32B883AAA00FA7FAD;
+			packageReferences = (
+				05E1B4062BBF3F4F00BD6348 /* XCRemoteSwiftPackageReference "swift-argument-parser" */,
+			);
 			productRefGroup = 0559A2BD2B883AAA00FA7FAD /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -131,6 +142,7 @@
 			files = (
 				0559A2CF2B883AE700FA7FAD /* main.swift in Sources */,
 				0559A2C02B883AAA00FA7FAD /* AppDelegate.swift in Sources */,
+				05E1B40A2BBF40D000BD6348 /* Notify.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -265,7 +277,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Developer ID Application";
 				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 7;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = "";
 				"DEVELOPMENT_TEAM[sdk=macosx*]" = HWDVZ7FBT2;
@@ -300,7 +312,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Developer ID Application";
 				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 7;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = "";
 				"DEVELOPMENT_TEAM[sdk=macosx*]" = HWDVZ7FBT2;
@@ -346,6 +358,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		05E1B4062BBF3F4F00BD6348 /* XCRemoteSwiftPackageReference "swift-argument-parser" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apple/swift-argument-parser.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.3.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		05E1B4072BBF3F4F00BD6348 /* ArgumentParser */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 05E1B4062BBF3F4F00BD6348 /* XCRemoteSwiftPackageReference "swift-argument-parser" */;
+			productName = ArgumentParser;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 0559A2B42B883AAA00FA7FAD /* Project object */;
 }

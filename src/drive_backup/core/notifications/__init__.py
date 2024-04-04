@@ -14,7 +14,7 @@ def show_notification(title, body, image=None):
             subprocess.Popen([win_drive_notification, "--title", title, "--body", body, "--image", image])
         elif platform.system() == "Darwin":
             mac_drive_notification = notification_dir / "mac" / "build" / "Drive Backup Notifications.app" / "Contents" / "MacOS" / "Drive Backup Notifications"
-            subprocess.Popen([mac_drive_notification, "-title", title, "-body", body])
+            subprocess.Popen([mac_drive_notification, "--title", title, "--body", body])
     except FileNotFoundError:
         logger = logging.getLogger(__name__)
         logger.info("Notification executable not found, unable to show notification.")
@@ -41,7 +41,7 @@ def get_macos_notification_authorization():
     )
     try:
         mac_drive_notification = resources.files("drive_backup.core.notifications") / "mac" / "build" / "Drive Backup Notifications.app" / "Contents" / "MacOS" / "Drive Backup Notifications"
-        subprocess.run([mac_drive_notification, "-authorization", "1"])
+        subprocess.run([mac_drive_notification, "-authorization"])
     except FileNotFoundError:
         logger = logging.getLogger(__name__)
         logger.info("Notification executable not found, unable to get notification authorization.")
