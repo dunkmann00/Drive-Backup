@@ -60,7 +60,7 @@ jobs:
           security list-keychain -d user -s $KEYCHAIN_PATH
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$MACOS_CI_KEYCHAIN_PWD" $KEYCHAIN_PATH
       - name: Build Xcode Archive
-        run: xcodebuild -project "$PROJECT_NAME/$PROJECT_NAME.xcodeproj" -scheme "$PROJECT_NAME" -sdk macosx -destination 'generic/platform=macOS' -archivePath "./build/$PROJECT_NAME.xcarchive" clean archive
+        run: xcodebuild -disableAutomaticPackageResolution -project "$PROJECT_NAME/$PROJECT_NAME.xcodeproj" -scheme "$PROJECT_NAME" -sdk macosx -destination 'generic/platform=macOS' -archivePath "./build/$PROJECT_NAME.xcarchive" clean archive
       - name: Export Xcode Archive
         run: xcodebuild -exportArchive -archivePath "./build/$PROJECT_NAME.xcarchive" -exportOptionsPlist ExportOptions.plist -exportPath ./dist
       - name: Zip App Bundle
