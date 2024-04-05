@@ -22,6 +22,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Setup Xcode
+        # https://github.com/actions/runner-images/blob/main/images/macos/macos-14-arm64-Readme.md#xcode
+        run: sudo xcode-select -s /Applications/Xcode_15.3.app
       - name: Setup keychain
         if: runner.os == 'macOS'
         env:
