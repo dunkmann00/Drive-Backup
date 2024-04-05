@@ -1,8 +1,6 @@
 name: Universal2 wheel test
 
 on:
-  push:
-
 
 jobs:
   test:
