@@ -8,99 +8,126 @@ on:
   workflow_dispatch:
 
 jobs:
-  mac_notifications:
-    name: Build macOS Notification App
-    runs-on: macos-14
-    defaults:
-      run:
-        shell: bash
+  # mac_notifications:
+  #   name: Build macOS Notification App
+  #   runs-on: macos-14
+  #   defaults:
+  #     run:
+  #       shell: bash
+  #   env:
+  #     PROJECT_NAME: Drive Backup Notifications
+  #     NOTIFICATION_PROJECT_PATH: ${{ github.workspace }}/src/drive_backup/core/notifications/mac
+  #   steps:
+  #     - name: Setup Xcode
+  #       # https://github.com/actions/runner-images/blob/main/images/macos/macos-14-arm64-Readme.md#xcode
+  #       run: sudo xcode-select -s /Applications/Xcode_15.3.app
+  #     - name: Setup Env Variables
+  #       run: |
+  #         echo "BUILD_PATH=$NOTIFICATION_PROJECT_PATH/build" >> "$GITHUB_ENV"
+  #         echo "EXPORT_PATH=$NOTIFICATION_PROJECT_PATH/dist" >> "$GITHUB_ENV"
+  #     - name: Checkout
+  #       uses: actions/checkout@v4
+  #     - name: Setup keychain
+  #       if: runner.os == 'macOS'
+  #       env:
+  #         MACOS_CERTIFICATE: ${{ secrets.PROD_MACOS_CERTIFICATE }}
+  #         MACOS_CERTIFICATE_PWD: ${{ secrets.PROD_MACOS_CERTIFICATE_PWD }}
+  #         MACOS_CI_KEYCHAIN_PWD: ${{ secrets.PROD_MACOS_CI_KEYCHAIN_PWD }}
+  #         CERTIFICATE_PATH: ${{ runner.temp }}/keychain/build_certificate.p12
+  #         KEYCHAIN_PATH: ${{ runner.temp }}/keychain/build.keychain
+  #       run: |
+  #         # Based on blog post by Federico Terzi & Localazy:
+  #         # https://federicoterzi.com/blog/automatic-code-signing-and-notarization-for-macos-apps-using-github-actions/
+  #         # https://localazy.com/blog/how-to-automatically-sign-macos-apps-using-github-actions
+  #         # Also based on Github's guide for signing Xcode applications
+  #         # https://docs.github.com/en/actions/deployment/deploying-xcode-applications/installing-an-apple-certificate-on-macos-runners-for-xcode-development
+  #
+  #         # Make keychain temporary directory
+  #         mkdir $RUNNER_TEMP/keychain
+  #
+  #         # Turn our base64-encoded certificate back to a regular .p12 file
+  #         echo $MACOS_CERTIFICATE | base64 --decode > $CERTIFICATE_PATH
+  #
+  #         # We need to create a new keychain, otherwise using the certificate will prompt
+  #         # with a UI dialog asking for the certificate password, which we can't
+  #         # use in a headless CI environment
+  #
+  #         # Create keychain
+  #         security create-keychain -p "$MACOS_CI_KEYCHAIN_PWD" $KEYCHAIN_PATH
+  #         security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+  #         security default-keychain -s $KEYCHAIN_PATH
+  #         security unlock-keychain -p "$MACOS_CI_KEYCHAIN_PWD" $KEYCHAIN_PATH
+  #
+  #         # Import certificate to keychain
+  #         security import $CERTIFICATE_PATH -k $KEYCHAIN_PATH -P "$MACOS_CERTIFICATE_PWD" -T /usr/bin/codesign
+  #         security list-keychain -d user -s $KEYCHAIN_PATH
+  #         security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$MACOS_CI_KEYCHAIN_PWD" $KEYCHAIN_PATH
+  #     - name: Build Xcode Archive
+  #       run: xcodebuild -disableAutomaticPackageResolution -project "$NOTIFICATION_PROJECT_PATH/$PROJECT_NAME/$PROJECT_NAME.xcodeproj" -scheme "$PROJECT_NAME" -sdk macosx -destination 'generic/platform=macOS' -archivePath "$BUILD_PATH/$PROJECT_NAME.xcarchive" clean archive
+  #     - name: Export Xcode Archive
+  #       run: xcodebuild -exportArchive -archivePath "$BUILD_PATH/$PROJECT_NAME.xcarchive" -exportOptionsPlist "$NOTIFICATION_PROJECT_PATH/ExportOptions.plist" -exportPath $EXPORT_PATH
+  #     - name: Notarize App
+  #       env:
+  #         MACOS_NOTARIZATION_APPLE_ID: ${{ secrets.PROD_MACOS_NOTARIZATION_APPLE_ID }}
+  #         MACOS_NOTARIZATION_TEAM_ID: ${{ secrets.PROD_MACOS_NOTARIZATION_TEAM_ID }}
+  #         MACOS_NOTARIZATION_PWD: ${{ secrets.PROD_MACOS_NOTARIZATION_PWD }}
+  #       run: |
+  #         echo "Store App & Zip paths"
+  #         APP_PATH=$EXPORT_PATH/$PROJECT_NAME.app
+  #         echo "APP_PATH=$APP_PATH" >> "$GITHUB_ENV"
+  #         ZIP_PATH=$EXPORT_PATH/$PROJECT_NAME.zip
+  #         echo "ZIP_PATH=$ZIP_PATH" >> "$GITHUB_ENV"
+  #
+  #         echo "Create Zip Archive"
+  #         ditto -c -k --keepParent "$APP_PATH" "$ZIP_PATH"
+  #
+  #         # Here we send the notarization request to Apple's Notarization service, waiting for the result.
+  #         # This typically takes a few seconds inside a CI environment, but it might take more depending on the App
+  #         # characteristics. We pass in all the credentials, including the password so that we can prevent a
+  #         # UI password dialog from blocking the CI
+  #
+  #         echo "Notarize app"
+  #         xcrun notarytool submit "$ZIP_PATH" --apple-id "$MACOS_NOTARIZATION_APPLE_ID" --team-id "$MACOS_NOTARIZATION_TEAM_ID" --password "$MACOS_NOTARIZATION_PWD" --wait
+  #
+  #         # Finally, we need to "attach the staple" to our executable, which will allow our app to be
+  #         # validated by macOS even when an internet connection is not available.
+  #         echo "Attach staple"
+  #         xcrun stapler staple "$APP_PATH"
+  #     - name: Zip App Bundle
+  #       run: |
+  #         # We need to Zip the app again to upload the stapled version as an artifact.
+  #         rm "$ZIP_PATH"
+  #         ditto -c -k --keepParent "$APP_PATH" "$ZIP_PATH"
+  #     - name: Upload Artifact
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: "${{ env.PROJECT_NAME }}-macos"
+  #         path: "${{ env.ZIP_PATH }}"
+  #         retention-days: 1
+  windows_notifications:
+    name: Build Windows Notification App
+    runs-on: windows-2022
     env:
       PROJECT_NAME: Drive Backup Notifications
-      NOTIFICATION_PROJECT_PATH: ${{ github.workspace }}/src/drive_backup/core/notifications/mac
+      NOTIFICATION_PROJECT_PATH: ${{ github.workspace }}\src\drive_backup\core\notifications\windows
     steps:
-      - name: Setup Xcode
-        # https://github.com/actions/runner-images/blob/main/images/macos/macos-14-arm64-Readme.md#xcode
-        run: sudo xcode-select -s /Applications/Xcode_15.3.app
-      - name: Setup Env Variables
-        run: |
-          echo "BUILD_PATH=$NOTIFICATION_PROJECT_PATH/build" >> "$GITHUB_ENV"
-          echo "EXPORT_PATH=$NOTIFICATION_PROJECT_PATH/dist" >> "$GITHUB_ENV"
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Setup keychain
-        if: runner.os == 'macOS'
-        env:
-          MACOS_CERTIFICATE: ${{ secrets.PROD_MACOS_CERTIFICATE }}
-          MACOS_CERTIFICATE_PWD: ${{ secrets.PROD_MACOS_CERTIFICATE_PWD }}
-          MACOS_CI_KEYCHAIN_PWD: ${{ secrets.PROD_MACOS_CI_KEYCHAIN_PWD }}
-          CERTIFICATE_PATH: ${{ runner.temp }}/keychain/build_certificate.p12
-          KEYCHAIN_PATH: ${{ runner.temp }}/keychain/build.keychain
+      - name: Setup Env Variables
         run: |
-          # Based on blog post by Federico Terzi & Localazy:
-          # https://federicoterzi.com/blog/automatic-code-signing-and-notarization-for-macos-apps-using-github-actions/
-          # https://localazy.com/blog/how-to-automatically-sign-macos-apps-using-github-actions
-          # Also based on Github's guide for signing Xcode applications
-          # https://docs.github.com/en/actions/deployment/deploying-xcode-applications/installing-an-apple-certificate-on-macos-runners-for-xcode-development
-
-          # Make keychain temporary directory
-          mkdir $RUNNER_TEMP/keychain
-
-          # Turn our base64-encoded certificate back to a regular .p12 file
-          echo $MACOS_CERTIFICATE | base64 --decode > $CERTIFICATE_PATH
-
-          # We need to create a new keychain, otherwise using the certificate will prompt
-          # with a UI dialog asking for the certificate password, which we can't
-          # use in a headless CI environment
-
-          # Create keychain
-          security create-keychain -p "$MACOS_CI_KEYCHAIN_PWD" $KEYCHAIN_PATH
-          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
-          security default-keychain -s $KEYCHAIN_PATH
-          security unlock-keychain -p "$MACOS_CI_KEYCHAIN_PWD" $KEYCHAIN_PATH
-
-          # Import certificate to keychain
-          security import $CERTIFICATE_PATH -k $KEYCHAIN_PATH -P "$MACOS_CERTIFICATE_PWD" -T /usr/bin/codesign
-          security list-keychain -d user -s $KEYCHAIN_PATH
-          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$MACOS_CI_KEYCHAIN_PWD" $KEYCHAIN_PATH
-      - name: Build Xcode Archive
-        run: xcodebuild -disableAutomaticPackageResolution -project "$NOTIFICATION_PROJECT_PATH/$PROJECT_NAME/$PROJECT_NAME.xcodeproj" -scheme "$PROJECT_NAME" -sdk macosx -destination 'generic/platform=macOS' -archivePath "$BUILD_PATH/$PROJECT_NAME.xcarchive" clean archive
-      - name: Export Xcode Archive
-        run: xcodebuild -exportArchive -archivePath "$BUILD_PATH/$PROJECT_NAME.xcarchive" -exportOptionsPlist "$NOTIFICATION_PROJECT_PATH/ExportOptions.plist" -exportPath $EXPORT_PATH
-      - name: Notarize App
-        env:
-          MACOS_NOTARIZATION_APPLE_ID: ${{ secrets.PROD_MACOS_NOTARIZATION_APPLE_ID }}
-          MACOS_NOTARIZATION_TEAM_ID: ${{ secrets.PROD_MACOS_NOTARIZATION_TEAM_ID }}
-          MACOS_NOTARIZATION_PWD: ${{ secrets.PROD_MACOS_NOTARIZATION_PWD }}
-        run: |
-          echo "Store App & Zip paths"
-          APP_PATH=$EXPORT_PATH/$PROJECT_NAME.app
-          echo "APP_PATH=$APP_PATH" >> "$GITHUB_ENV"
-          ZIP_PATH=$EXPORT_PATH/$PROJECT_NAME.zip
-          echo "ZIP_PATH=$ZIP_PATH" >> "$GITHUB_ENV"
-
-          echo "Create Zip Archive"
-          ditto -c -k --keepParent "$APP_PATH" "$ZIP_PATH"
-
-          # Here we send the notarization request to Apple's Notarization service, waiting for the result.
-          # This typically takes a few seconds inside a CI environment, but it might take more depending on the App
-          # characteristics. We pass in all the credentials, including the password so that we can prevent a
-          # UI password dialog from blocking the CI
-
-          echo "Notarize app"
-          xcrun notarytool submit "$ZIP_PATH" --apple-id "$MACOS_NOTARIZATION_APPLE_ID" --team-id "$MACOS_NOTARIZATION_TEAM_ID" --password "$MACOS_NOTARIZATION_PWD" --wait
-
-          # Finally, we need to "attach the staple" to our executable, which will allow our app to be
-          # validated by macOS even when an internet connection is not available.
-          echo "Attach staple"
-          xcrun stapler staple "$APP_PATH"
-      - name: Zip App Bundle
-        run: |
-          # We need to Zip the app again to upload the stapled version as an artifact.
-          rm "$ZIP_PATH"
-          ditto -c -k --keepParent "$APP_PATH" "$ZIP_PATH"
+          $BUILD_PATH="$env:NOTIFICATION_PROJECT_PATH\build"
+          echo "BUILD_PATH=$BUILD_PATH" >> "$env:GITHUB_ENV"
+          echo "EXE_PATH=$BUILD_PATH\$env:PROJECT_NAME.exe" >> "$env:GITHUB_ENV"
+          echo "ZIP_PATH=$BUILD_PATH\$env:PROJECT_NAME.zip" >> "$env:GITHUB_ENV"
+      - name: Build VS Project
+        run: msbuild "$env:NOTIFICATION_PROJECT_PATH\$env:PROJECT_NAME\$env:PROJECT_NAME.vcxproj" -t:rebuild -verbosity:diag -property:Configuration=Release -property:Platform=x64 -property:OutDir="$env:BUILD_PATH\"
+      - name: Zip App
+        run: Compress-Archive -Path "$env:EXE_PATH" -DestinationPath "$env:ZIP_PATH"
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: "${{ env.PROJECT_NAME }}-macos"
+          name: "${{ env.PROJECT_NAME }}-windows"
           path: "${{ env.ZIP_PATH }}"
           retention-days: 1
