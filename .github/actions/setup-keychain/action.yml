@@ -1,0 +1,58 @@
+name: "Setup Keychain"
+description: "Sets up the Keychain on macOS for codesigning with the given
+  inputs."
+inputs:
+  macos-certificate:
+    description: "Base64 encoded signing certificate."
+    required: true
+  macos-certificate-pwd:
+    description: "Password for the signing certificate."
+    required: true
+  macos-ci-keychain-pwd:
+    description: "A password to use for the CI keychain. Can be anything, should
+      be a strong randomly generated password."
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Check for macOS
+      shell: bash
+      if: runner.os != 'macOS'
+      run: |
+        echo "setup-keychain should only be ran on a macOS runner."
+        exit 1
+    - name: Setup Keychain
+      shell: bash
+      env:
+        MACOS_CERTIFICATE: ${{ inputs.macos-certificate }}
+        MACOS_CERTIFICATE_PWD: ${{ inputs.macos-certificate-pwd }}
+        MACOS_CI_KEYCHAIN_PWD: ${{ inputs.macos-ci-keychain-pwd }}
+        CERTIFICATE_PATH: ${{ runner.temp }}/keychain/build_certificate.p12
+        KEYCHAIN_PATH: ${{ runner.temp }}/keychain/build.keychain
+      run: |
+        # Based on blog post by Federico Terzi & Localazy:
+        # https://federicoterzi.com/blog/automatic-code-signing-and-notarization-for-macos-apps-using-github-actions/
+        # https://localazy.com/blog/how-to-automatically-sign-macos-apps-using-github-actions
+        # Also based on Github"s guide for signing Xcode applications
+        # https://docs.github.com/en/actions/deployment/deploying-xcode-applications/installing-an-apple-certificate-on-macos-runners-for-xcode-development
+
+        # Make keychain temporary directory
+        mkdir $RUNNER_TEMP/keychain
+
+        # Turn our base64-encoded certificate back to a regular .p12 file
+        echo $MACOS_CERTIFICATE | base64 --decode > $CERTIFICATE_PATH
+
+        # We need to create a new keychain, otherwise using the certificate will prompt
+        # with a UI dialog asking for the certificate password, which we can"t
+        # use in a headless CI environment
+
+        # Create keychain
+        security create-keychain -p "$MACOS_CI_KEYCHAIN_PWD" $KEYCHAIN_PATH
+        security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+        security default-keychain -s $KEYCHAIN_PATH
+        security unlock-keychain -p "$MACOS_CI_KEYCHAIN_PWD" $KEYCHAIN_PATH
+
+        # Import certificate to keychain
+        security import $CERTIFICATE_PATH -k $KEYCHAIN_PATH -P "$MACOS_CERTIFICATE_PWD" -T /usr/bin/codesign
+        security list-keychain -d user -s $KEYCHAIN_PATH
+        security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$MACOS_CI_KEYCHAIN_PWD" $KEYCHAIN_PATH

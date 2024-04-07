@@ -31,40 +31,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Setup keychain
-        if: runner.os == 'macOS'
-        env:
-          MACOS_CERTIFICATE: ${{ secrets.PROD_MACOS_CERTIFICATE }}
-          MACOS_CERTIFICATE_PWD: ${{ secrets.PROD_MACOS_CERTIFICATE_PWD }}
-          MACOS_CI_KEYCHAIN_PWD: ${{ secrets.PROD_MACOS_CI_KEYCHAIN_PWD }}
-          CERTIFICATE_PATH: ${{ runner.temp }}/keychain/build_certificate.p12
-          KEYCHAIN_PATH: ${{ runner.temp }}/keychain/build.keychain
-        run: |
-          # Based on blog post by Federico Terzi & Localazy:
-          # https://federicoterzi.com/blog/automatic-code-signing-and-notarization-for-macos-apps-using-github-actions/
-          # https://localazy.com/blog/how-to-automatically-sign-macos-apps-using-github-actions
-          # Also based on Github's guide for signing Xcode applications
-          # https://docs.github.com/en/actions/deployment/deploying-xcode-applications/installing-an-apple-certificate-on-macos-runners-for-xcode-development
-
-          # Make keychain temporary directory
-          mkdir $RUNNER_TEMP/keychain
-
-          # Turn our base64-encoded certificate back to a regular .p12 file
-          echo $MACOS_CERTIFICATE | base64 --decode > $CERTIFICATE_PATH
-
-          # We need to create a new keychain, otherwise using the certificate will prompt
-          # with a UI dialog asking for the certificate password, which we can't
-          # use in a headless CI environment
-
-          # Create keychain
-          security create-keychain -p "$MACOS_CI_KEYCHAIN_PWD" $KEYCHAIN_PATH
-          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
-          security default-keychain -s $KEYCHAIN_PATH
-          security unlock-keychain -p "$MACOS_CI_KEYCHAIN_PWD" $KEYCHAIN_PATH
-
-          # Import certificate to keychain
-          security import $CERTIFICATE_PATH -k $KEYCHAIN_PATH -P "$MACOS_CERTIFICATE_PWD" -T /usr/bin/codesign
-          security list-keychain -d user -s $KEYCHAIN_PATH
-          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$MACOS_CI_KEYCHAIN_PWD" $KEYCHAIN_PATH
+        uses: ./.github/actions/setup-keychain
+        with:
+          macos-certificate: ${{ secrets.PROD_MACOS_CERTIFICATE }}
+          macos-certificate-pwd: ${{ secrets.PROD_MACOS_CERTIFICATE_PWD }}
+          macos-ci-keychain-pwd: ${{ secrets.PROD_MACOS_CI_KEYCHAIN_PWD }}
       - name: Build Xcode Archive
         run: xcodebuild -disableAutomaticPackageResolution -project "$NOTIFICATION_PROJECT_PATH/$PROJECT_NAME/$PROJECT_NAME.xcodeproj" -scheme "$PROJECT_NAME" -sdk macosx -destination 'generic/platform=macOS' -archivePath "$BUILD_PATH/$PROJECT_NAME.xcarchive" clean archive
       - name: Export Xcode Archive
