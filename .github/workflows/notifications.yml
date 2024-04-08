@@ -2,7 +2,11 @@ name: Notifications Build
 
 on:
   push:
+    paths:
+      - 'src/drive_backup/core/notifications/*/Drive Backup Notifications/**'
 
+  # Allows this workflow to be called from another workflow
+  workflow_call:
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
