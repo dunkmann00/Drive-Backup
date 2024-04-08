@@ -11,6 +11,9 @@ on:
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
+env:
+  PROJECT_NAME: Drive Backup Notifications
+
 jobs:
   mac_notifications:
     name: Build macOS Notification App
@@ -19,7 +22,6 @@ jobs:
       run:
         shell: bash
     env:
-      PROJECT_NAME: Drive Backup Notifications
       NOTIFICATION_PROJECT_PATH: ${{ github.workspace }}/src/drive_backup/core/notifications/mac
     steps:
       - name: Setup Xcode
@@ -80,7 +82,6 @@ jobs:
     name: Build Windows Notification App
     runs-on: windows-2022
     env:
-      PROJECT_NAME: Drive Backup Notifications
       NOTIFICATION_PROJECT_PATH: ${{ github.workspace }}\src\drive_backup\core\notifications\windows
     steps:
       - name: Setup MSBuild
