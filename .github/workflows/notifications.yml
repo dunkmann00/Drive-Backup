@@ -77,7 +77,6 @@ jobs:
         with:
           name: "${{ env.PROJECT_NAME }}-macos"
           path: "${{ env.ZIP_PATH }}"
-          retention-days: 1
   windows_notifications:
     name: Build Windows Notification App
     runs-on: windows-2022
@@ -103,4 +102,3 @@ jobs:
         with:
           name: "${{ env.PROJECT_NAME }}-windows"
           path: "${{ env.ZIP_PATH }}"
-          retention-days: 1
