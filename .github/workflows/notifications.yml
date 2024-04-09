@@ -29,11 +29,10 @@ jobs:
         run: sudo xcode-select -s /Applications/Xcode_15.3.app
       - name: Setup Env Variables
         run: |
-          EXPORT_PATH="$NOTIFICATION_PROJECT_PATH/dist"
-          echo "EXPORT_PATH=$EXPORT_PATH" >> "$GITHUB_ENV"
-          echo "BUILD_PATH=$NOTIFICATION_PROJECT_PATH/build" >> "$GITHUB_ENV"
-          echo "APP_PATH=$EXPORT_PATH/$PROJECT_NAME.app" >> "$GITHUB_ENV"
-          echo "ZIP_PATH=$EXPORT_PATH/$PROJECT_NAME.zip" >> "$GITHUB_ENV"
+          BUILD_PATH="$NOTIFICATION_PROJECT_PATH/build"
+          echo "BUILD_PATH=$BUILD_PATH" >> "$GITHUB_ENV"
+          echo "APP_PATH=$BUILD_PATH/$PROJECT_NAME.app" >> "$GITHUB_ENV"
+          echo "ZIP_PATH=$BUILD_PATH/$PROJECT_NAME.zip" >> "$GITHUB_ENV"
       - name: Checkout
         uses: actions/checkout@v4
       - name: Setup keychain
@@ -43,9 +42,9 @@ jobs:
           macos-certificate-pwd: ${{ secrets.PROD_MACOS_CERTIFICATE_PWD }}
           macos-ci-keychain-pwd: ${{ secrets.PROD_MACOS_CI_KEYCHAIN_PWD }}
       - name: Build Xcode Archive
-        run: xcodebuild -disableAutomaticPackageResolution -project "$NOTIFICATION_PROJECT_PATH/$PROJECT_NAME/$PROJECT_NAME.xcodeproj" -scheme "$PROJECT_NAME" -sdk macosx -destination 'generic/platform=macOS' -archivePath "$BUILD_PATH/$PROJECT_NAME.xcarchive" clean archive
+        run: xcodebuild -disableAutomaticPackageResolution -project "$NOTIFICATION_PROJECT_PATH/$PROJECT_NAME/$PROJECT_NAME.xcodeproj" -scheme "$PROJECT_NAME" -sdk macosx -destination "generic/platform=macOS" -archivePath "$BUILD_PATH/$PROJECT_NAME.xcarchive" clean archive
       - name: Export Xcode Archive
-        run: xcodebuild -exportArchive -archivePath "$BUILD_PATH/$PROJECT_NAME.xcarchive" -exportOptionsPlist "$NOTIFICATION_PROJECT_PATH/ExportOptions.plist" -exportPath $EXPORT_PATH
+        run: xcodebuild -exportArchive -archivePath "$BUILD_PATH/$PROJECT_NAME.xcarchive" -exportOptionsPlist "$NOTIFICATION_PROJECT_PATH/ExportOptions.plist" -exportPath $BUILD_PATH
       - name: Notarize App
         env:
           MACOS_NOTARIZATION_APPLE_ID: ${{ secrets.PROD_MACOS_NOTARIZATION_APPLE_ID }}
