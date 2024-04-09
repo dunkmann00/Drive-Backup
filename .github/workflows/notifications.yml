@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - 'src/drive_backup/core/notifications/*/Drive Backup Notifications/**'
+      - '.github/workflows/notifications.yml'
 
   # Allows this workflow to be called from another workflow
   workflow_call:
