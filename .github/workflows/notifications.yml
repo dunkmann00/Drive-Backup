@@ -43,9 +43,22 @@ jobs:
           macos-certificate-pwd: ${{ secrets.PROD_MACOS_CERTIFICATE_PWD }}
           macos-ci-keychain-pwd: ${{ secrets.PROD_MACOS_CI_KEYCHAIN_PWD }}
       - name: Build Xcode Archive
-        run: xcodebuild -disableAutomaticPackageResolution -project "$NOTIFICATION_PROJECT_PATH/$PROJECT_NAME/$PROJECT_NAME.xcodeproj" -scheme "$PROJECT_NAME" -sdk macosx -destination "generic/platform=macOS" -archivePath "$BUILD_PATH/$PROJECT_NAME.xcarchive" clean archive
+        # This was helpful for this step:
+        # https://www.andrewhoog.com/post/how-to-build-an-ios-app-with-github-actions-2023/
+        run: |
+          xcodebuild -disableAutomaticPackageResolution \
+            -project "$NOTIFICATION_PROJECT_PATH/$PROJECT_NAME/$PROJECT_NAME.xcodeproj" \
+            -scheme "$PROJECT_NAME" \
+            -sdk macosx \
+            -destination "generic/platform=macOS" \
+            -archivePath "$BUILD_PATH/$PROJECT_NAME.xcarchive" \
+            clean archive
       - name: Export Xcode Archive
-        run: xcodebuild -exportArchive -archivePath "$BUILD_PATH/$PROJECT_NAME.xcarchive" -exportOptionsPlist "$NOTIFICATION_PROJECT_PATH/ExportOptions.plist" -exportPath $BUILD_PATH
+        run: |
+          xcodebuild -exportArchive \
+            -archivePath "$BUILD_PATH/$PROJECT_NAME.xcarchive" \
+            -exportOptionsPlist "$NOTIFICATION_PROJECT_PATH/ExportOptions.plist" \
+            -exportPath $BUILD_PATH
       - name: Notarize App
         env:
           MACOS_NOTARIZATION_APPLE_ID: ${{ secrets.PROD_MACOS_NOTARIZATION_APPLE_ID }}
@@ -61,7 +74,11 @@ jobs:
           # UI password dialog from blocking the CI
 
           echo "Notarize app"
-          xcrun notarytool submit "$ZIP_PATH" --apple-id "$MACOS_NOTARIZATION_APPLE_ID" --team-id "$MACOS_NOTARIZATION_TEAM_ID" --password "$MACOS_NOTARIZATION_PWD" --wait
+          xcrun notarytool submit "$ZIP_PATH" \
+            --apple-id "$MACOS_NOTARIZATION_APPLE_ID" \
+            --team-id "$MACOS_NOTARIZATION_TEAM_ID" \
+            --password "$MACOS_NOTARIZATION_PWD" \
+            --wait
 
           # Finally, we need to "attach the staple" to our executable, which will allow our app to be
           # validated by macOS even when an internet connection is not available.
@@ -94,7 +111,13 @@ jobs:
           echo "EXE_PATH=$BUILD_PATH\$env:PROJECT_NAME.exe" >> "$env:GITHUB_ENV"
           echo "ZIP_PATH=$BUILD_PATH\$env:PROJECT_NAME.zip" >> "$env:GITHUB_ENV"
       - name: Build VS Project
-        run: msbuild "$env:NOTIFICATION_PROJECT_PATH\$env:PROJECT_NAME\$env:PROJECT_NAME.vcxproj" -t:rebuild -verbosity:diag -property:Configuration=Release -property:Platform=x64 -property:OutDir="$env:BUILD_PATH\"
+        run: |
+          msbuild "$env:NOTIFICATION_PROJECT_PATH\$env:PROJECT_NAME\$env:PROJECT_NAME.vcxproj" `
+            -t:rebuild `
+            -verbosity:diag `
+            -property:Configuration=Release `
+            -property:Platform=x64 `
+            -property:OutDir="$env:BUILD_PATH\"
       - name: Zip App
         run: Compress-Archive -Path "$env:EXE_PATH" -DestinationPath "$env:ZIP_PATH"
       - name: Upload Artifact
