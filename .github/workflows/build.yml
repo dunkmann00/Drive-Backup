@@ -1,0 +1,105 @@
+name: Build/Release App
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  release:
+    types: [published]
+
+env:
+  PYTHONUNBUFFERED: 1
+
+jobs:
+  notifications-build:
+    uses: ./.github/workflows/notifications.yml
+
+  macos-build:
+    name: Build macOS App Binary
+    needs: notifications-build
+    runs-on: macos-14-large # Drop the '-large' once the prerelease runner-image is released
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Setup Poetry
+        uses: ./.github/actions/setup-poetry
+      - name: Setup Keychain
+        uses: ./.github/actions/setup-keychain
+        with:
+          macos-certificate: ${{ secrets.PROD_MACOS_CERTIFICATE }}
+          macos-certificate-pwd: ${{ secrets.PROD_MACOS_CERTIFICATE_PWD }}
+          macos-ci-keychain-pwd: ${{ secrets.PROD_MACOS_CI_KEYCHAIN_PWD }}
+      - name: Install Drive Backup package & dependencies
+        run: poetry install
+      - name: Get notification app
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.notifications-build.outputs.macos_artifact_name }}
+          path: ${{ needs.notifications-build.outputs.macos_build_path }}
+      - name: Unzip notification app
+        env:
+          NOTIFICATION_NAME: ${{ needs.notifications-build.outputs.project_name }}
+          MACOS_NOTFICATION_BUILD: ${{ needs.notifications-build.outputs.macos_build_path }}
+        run: ditto -x -k "$MACOS_NOTFICATION_BUILD/$NOTIFICATION_NAME.zip" "$MACOS_NOTFICATION_BUILD"
+      - name: Build app binary
+        env:
+          MACOS_CODESIGN_IDENTITY: ${{ secrets.PROD_MACOS_CERTIFICATE_IDENTITY }}
+        run: poetry run python app-build.py build --macos-codesign-identity $MACOS_CODESIGN_IDENTITY
+      - name: Notarize app
+        env:
+          MACOS_NOTARIZATION_APPLE_ID: ${{ secrets.PROD_MACOS_NOTARIZATION_APPLE_ID }}
+          MACOS_NOTARIZATION_TEAM_ID: ${{ secrets.PROD_MACOS_NOTARIZATION_TEAM_ID }}
+          MACOS_NOTARIZATION_PWD: ${{ secrets.PROD_MACOS_NOTARIZATION_PWD }}
+        run: |
+          echo "Create Zip Archive"
+          ZIP_PATH=$(poetry run python app-build.py archive --format zip)
+
+          # Here we send the notarization request to Apple's Notarization service, waiting for the result.
+          # This typically takes a few seconds inside a CI environment, but it might take more depending on the App
+          # characteristics. We pass in all the credentials, including the password so that we can prevent a
+          # UI password dialog from blocking the CI
+
+          echo "Notarize app"
+          xcrun notarytool submit "$ZIP_PATH" \
+            --apple-id "$MACOS_NOTARIZATION_APPLE_ID" \
+            --team-id "$MACOS_NOTARIZATION_TEAM_ID" \
+            --password "$MACOS_NOTARIZATION_PWD" \
+            --wait
+
+          # Remove the zip, we don't need it anymore
+          rm "$ZIP_PATH"
+
+          # This is where we would normally "attach the staple" to our executable. Unfortunately that can't be done at
+          # this time:
+          #
+          #   "Although tickets are created for standalone binaries, it’s not currently possible to staple tickets to them."
+          #   (Source: https://developer.apple.com/documentation/security/notarizing_macos_software_before_distribution/customizing_the_notarization_workflow#3087720)
+          #
+          # This isn't a huge problem because our binary can still be verified on a users machine as long as there is an
+          # internet connection.
+      - name: Move notification app into binary directory
+        run: poetry run python app-build.py add-notifications
+      - name: Archive app
+        run: |
+          # Create the archive name
+          VERSION=$(poetry version -s)
+          ARCHIVE_NAME=$(poetry run python app-build.py archive-name $VERSION)
+
+          # Build the archive and store the path to it
+          ARCHIVE_PATH=$(poetry run python app-build.py archive --name $ARCHIVE_NAME)
+
+          # Store the archive path & name as environment variables
+          echo "ARCHIVE_PATH=$ARCHIVE_PATH" >> "$GITHUB_ENV"
+          echo "ARCHIVE_NAME=$ARCHIVE_NAME" >> "$GITHUB_ENV"
+      - name: Upload archive artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ARCHIVE_NAME }}
+          path: ${{ env.ARCHIVE_PATH }}

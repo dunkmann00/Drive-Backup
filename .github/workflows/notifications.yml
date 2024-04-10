@@ -8,6 +8,22 @@ on:
 
   # Allows this workflow to be called from another workflow
   workflow_call:
+    outputs:
+      project_name:
+        description: Name of the notification apps (they both use the same name).
+        value: ${{ jobs.mac_notifications.outputs.project_name }}
+      macos_build_path:
+        description: Path to the macOS notification app build directory.
+        value: ${{ jobs.mac_notifications.outputs.build_path }}
+      macos_artifact_name:
+        description: The name of the artifact for the macOS build.
+        value: ${{ jobs.mac_notifications.outputs.artifact_name }}
+      windows_build_path:
+        description: Path to the Windows notification app build directory.
+        value: ${{ jobs.windows_notifications.outputs.build_path }}
+      windows_artifact_name:
+        description: The name of the artifact for the Windows build.
+        value: ${{ jobs.windows_notifications.outputs.artifact_name }}
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -24,16 +40,28 @@ jobs:
         shell: bash
     env:
       NOTIFICATION_PROJECT_PATH: ${{ github.workspace }}/src/drive_backup/core/notifications/mac
+    outputs:
+      project_name: ${{ steps.setup-variables.outputs.PROJECT_NAME }}
+      build_path: ${{ steps.setup-variables.outputs.BUILD_PATH }}
+      artifact_name: ${{ steps.setup-variables.outputs.ARTIFACT_NAME }}
     steps:
       - name: Setup Xcode
         # https://github.com/actions/runner-images/blob/main/images/macos/macos-14-arm64-Readme.md#xcode
         run: sudo xcode-select -s /Applications/Xcode_15.3.app
       - name: Setup Env Variables
+        id: setup-variables
         run: |
           BUILD_PATH="$NOTIFICATION_PROJECT_PATH/build"
           echo "BUILD_PATH=$BUILD_PATH" >> "$GITHUB_ENV"
           echo "APP_PATH=$BUILD_PATH/$PROJECT_NAME.app" >> "$GITHUB_ENV"
           echo "ZIP_PATH=$BUILD_PATH/$PROJECT_NAME.zip" >> "$GITHUB_ENV"
+
+          ARTIFACT_NAME="$(echo "$PROJECT_NAME" | tr " " _)-macos"
+          echo "ARTIFACT_NAME=$ARTIFACT_NAME" >> "$GITHUB_ENV"
+
+          echo "PROJECT_NAME=$PROJECT_NAME" >> "$GITHUB_OUTPUT"
+          echo "BUILD_PATH=$BUILD_PATH" >> "$GITHUB_OUTPUT"
+          echo "ARTIFACT_NAME=$ARTIFACT_NAME" >> "$GITHUB_OUTPUT"
       - name: Checkout
         uses: actions/checkout@v4
       - name: Setup keychain
@@ -92,24 +120,34 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: "${{ env.PROJECT_NAME }}-macos"
+          name: "${{ env.ARTIFACT_NAME }}"
           path: "${{ env.ZIP_PATH }}"
   windows_notifications:
     name: Build Windows Notification App
     runs-on: windows-2022
     env:
       NOTIFICATION_PROJECT_PATH: ${{ github.workspace }}\src\drive_backup\core\notifications\windows
+    outputs:
+      build_path: ${{ steps.setup-variables.outputs.BUILD_PATH }}
+      artifact_name: ${{ steps.setup-variables.outputs.ARTIFACT_NAME }}
     steps:
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
       - name: Checkout
         uses: actions/checkout@v4
       - name: Setup Env Variables
+        id: setup-variables
         run: |
           $BUILD_PATH="$env:NOTIFICATION_PROJECT_PATH\build"
           echo "BUILD_PATH=$BUILD_PATH" >> "$env:GITHUB_ENV"
           echo "EXE_PATH=$BUILD_PATH\$env:PROJECT_NAME.exe" >> "$env:GITHUB_ENV"
           echo "ZIP_PATH=$BUILD_PATH\$env:PROJECT_NAME.zip" >> "$env:GITHUB_ENV"
+
+          $ARTIFACT_NAME=$env:PROJECT_NAME.Replace(" ","_") + "-windows"
+          echo "ARTIFACT_NAME=$ARTIFACT_NAME" >> "$env:GITHUB_ENV"
+
+          echo "BUILD_PATH=$BUILD_PATH" >> "$env:GITHUB_OUTPUT"
+          echo "ARTIFACT_NAME=$ARTIFACT_NAME" >> "$env:GITHUB_OUTPUT"
       - name: Build VS Project
         run: |
           msbuild "$env:NOTIFICATION_PROJECT_PATH\$env:PROJECT_NAME\$env:PROJECT_NAME.vcxproj" `
@@ -123,5 +161,5 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: "${{ env.PROJECT_NAME }}-windows"
+          name: "${{ env.ARTIFACT_NAME }}"
           path: "${{ env.ZIP_PATH }}"
