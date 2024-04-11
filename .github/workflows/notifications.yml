@@ -9,21 +9,21 @@ on:
   # Allows this workflow to be called from another workflow
   workflow_call:
     outputs:
-      project_name:
+      project-name:
         description: Name of the notification apps (they both use the same name).
-        value: ${{ jobs.mac_notifications.outputs.project_name }}
-      macos_build_path:
+        value: ${{ jobs.mac-notifications.outputs.project-name }}
+      macos-build-path:
         description: Path to the macOS notification app build directory.
-        value: ${{ jobs.mac_notifications.outputs.build_path }}
-      macos_artifact_name:
+        value: ${{ jobs.mac-notifications.outputs.build-path }}
+      macos-artifact-name:
         description: The name of the artifact for the macOS build.
-        value: ${{ jobs.mac_notifications.outputs.artifact_name }}
-      windows_build_path:
+        value: ${{ jobs.mac-notifications.outputs.artifact-name }}
+      windows-build-path:
         description: Path to the Windows notification app build directory.
-        value: ${{ jobs.windows_notifications.outputs.build_path }}
-      windows_artifact_name:
+        value: ${{ jobs.windows-notifications.outputs.build-path }}
+      windows-artifact-name:
         description: The name of the artifact for the Windows build.
-        value: ${{ jobs.windows_notifications.outputs.artifact_name }}
+        value: ${{ jobs.windows-notifications.outputs.artifact-name }}
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -32,7 +32,7 @@ env:
   PROJECT_NAME: Drive Backup Notifications
 
 jobs:
-  mac_notifications:
+  mac-notifications:
     name: Build macOS Notification App
     runs-on: macos-14
     defaults:
@@ -41,9 +41,9 @@ jobs:
     env:
       NOTIFICATION_PROJECT_PATH: ${{ github.workspace }}/src/drive_backup/core/notifications/mac
     outputs:
-      project_name: ${{ steps.setup-variables.outputs.PROJECT_NAME }}
-      build_path: ${{ steps.setup-variables.outputs.BUILD_PATH }}
-      artifact_name: ${{ steps.setup-variables.outputs.ARTIFACT_NAME }}
+      project-name: ${{ steps.setup-variables.outputs.PROJECT_NAME }}
+      build-path: ${{ steps.setup-variables.outputs.BUILD_PATH }}
+      artifact-name: ${{ steps.setup-variables.outputs.ARTIFACT_NAME }}
     steps:
       - name: Setup Xcode
         # https://github.com/actions/runner-images/blob/main/images/macos/macos-14-arm64-Readme.md#xcode
@@ -122,14 +122,14 @@ jobs:
         with:
           name: "${{ env.ARTIFACT_NAME }}"
           path: "${{ env.ZIP_PATH }}"
-  windows_notifications:
+  windows-notifications:
     name: Build Windows Notification App
     runs-on: windows-2022
     env:
       NOTIFICATION_PROJECT_PATH: ${{ github.workspace }}\src\drive_backup\core\notifications\windows
     outputs:
-      build_path: ${{ steps.setup-variables.outputs.BUILD_PATH }}
-      artifact_name: ${{ steps.setup-variables.outputs.ARTIFACT_NAME }}
+      build-path: ${{ steps.setup-variables.outputs.BUILD_PATH }}
+      artifact-name: ${{ steps.setup-variables.outputs.ARTIFACT_NAME }}
     steps:
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2

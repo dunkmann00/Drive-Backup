@@ -14,13 +14,26 @@ jobs:
   notifications-build:
     uses: ./.github/workflows/notifications.yml
 
-  macos-build:
-    name: Build macOS App Binary
+  binary-build:
+    name: Build ${{ matrix.os }} App Binary
     needs: notifications-build
-    runs-on: macos-14-large # Drop the '-large' once the prerelease runner-image is released
+    runs-on: ${{ matrix.os }}
     defaults:
       run:
         shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        build:
+          - os: macos-14
+            notifications:
+              artifact-name: ${{ needs.notifications-build.outputs.macos-artifact-name }}
+              build-path: ${{ needs.notifications-build.outputs.macos-build-path }}
+          - os: windows-2022
+            notifications:
+              artifact-name: ${{ needs.notifications-build.outputs.windows-artifact-name }}
+              build-path: ${{ needs.notifications-build.outputs.windows-build-path }}
+          - os: ubuntu-22.04
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -30,7 +43,8 @@ jobs:
           python-version: "3.11"
       - name: Setup Poetry
         uses: ./.github/actions/setup-poetry
-      - name: Setup Keychain
+      - name: Setup Keychain (macOS)
+        if: runner.os == 'macOS'
         uses: ./.github/actions/setup-keychain
         with:
           macos-certificate: ${{ secrets.PROD_MACOS_CERTIFICATE }}
@@ -38,21 +52,24 @@ jobs:
           macos-ci-keychain-pwd: ${{ secrets.PROD_MACOS_CI_KEYCHAIN_PWD }}
       - name: Install Drive Backup package & dependencies
         run: poetry install
-      - name: Get notification app
+      - name: Get notification app (macOS & Windows)
+        if: runner.os == 'macOS' || runner.os == 'Windows'
         uses: actions/download-artifact@v4
         with:
-          name: ${{ needs.notifications-build.outputs.macos_artifact_name }}
-          path: ${{ needs.notifications-build.outputs.macos_build_path }}
-      - name: Unzip notification app
+          name: ${{ matrix.notifications.artifact-name }}
+          path: ${{ matrix.notifications.build-path }}
+      - name: Unzip notification app (macOS & Windows)
+        if: runner.os == 'macOS' || runner.os == 'Windows'
         env:
-          NOTIFICATION_NAME: ${{ needs.notifications-build.outputs.project_name }}
-          MACOS_NOTFICATION_BUILD: ${{ needs.notifications-build.outputs.macos_build_path }}
-        run: ditto -x -k "$MACOS_NOTFICATION_BUILD/$NOTIFICATION_NAME.zip" "$MACOS_NOTFICATION_BUILD"
+          NOTIFICATION_NAME: ${{ needs.notifications-build.outputs.project-name }}
+          NOTFICATION_BUILD: ${{ matrix.notifications.build-path }}
+        run: python -c "import shutil; shutil.unpack_archive('$NOTFICATION_BUILD/$NOTIFICATION_NAME.zip', '$NOTFICATION_BUILD')"
       - name: Build app binary
         env:
           MACOS_CODESIGN_IDENTITY: ${{ secrets.PROD_MACOS_CERTIFICATE_IDENTITY }}
-        run: poetry run python app-build.py build --macos-codesign-identity $MACOS_CODESIGN_IDENTITY
-      - name: Notarize app
+        run: poetry run python app-build.py build
+      - name: Notarize app (macOS)
+        if: runner.os == 'macOS'
         env:
           MACOS_NOTARIZATION_APPLE_ID: ${{ secrets.PROD_MACOS_NOTARIZATION_APPLE_ID }}
           MACOS_NOTARIZATION_TEAM_ID: ${{ secrets.PROD_MACOS_NOTARIZATION_TEAM_ID }}
@@ -84,20 +101,27 @@ jobs:
           #
           # This isn't a huge problem because our binary can still be verified on a users machine as long as there is an
           # internet connection.
-      - name: Move notification app into binary directory
+      - name: Move notification app into binary directory (macOS & Windows)
+        if: runner.os == 'macOS' || runner.os == 'Windows'
         run: poetry run python app-build.py add-notifications
+      - name: Get Archive Name
+        run: |
+          # Get the project's version
+          VERSION=$(poetry version -s)
+          if [ "$GITHUB_EVENT_NAME" != "release" ]; then
+            VERSION="$VERSION+$(git rev-parse --short $GITHUB_SHA)"
+          fi
+
+          # Create the archive name and store as an environment varable
+          ARCHIVE_NAME=$(poetry run python app-build.py archive-name $VERSION)
+          echo "ARCHIVE_NAME=$ARCHIVE_NAME" >> "$GITHUB_ENV"
       - name: Archive app
         run: |
-          # Create the archive name
-          VERSION=$(poetry version -s)
-          ARCHIVE_NAME=$(poetry run python app-build.py archive-name $VERSION)
-
           # Build the archive and store the path to it
           ARCHIVE_PATH=$(poetry run python app-build.py archive --name $ARCHIVE_NAME)
 
-          # Store the archive path & name as environment variables
+          # Store the archive path as an environment variable
           echo "ARCHIVE_PATH=$ARCHIVE_PATH" >> "$GITHUB_ENV"
-          echo "ARCHIVE_NAME=$ARCHIVE_NAME" >> "$GITHUB_ENV"
       - name: Upload archive artifact
         uses: actions/upload-artifact@v4
         with:
