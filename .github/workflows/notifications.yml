@@ -85,10 +85,14 @@ jobs:
             -archivePath "$GITHUB_WORKSPACE/$BUILD_PATH/$PROJECT_NAME.xcarchive" \
             clean archive
       - name: Export Xcode Archive
+        env:
+          EXPORT_OPTIONS_PLIST: ${{ secrets.EXPORT_OPTIONS_PLIST }}
         run: |
+          EXPORT_OPTIONS_PATH="$RUNNER_TEMP/ExportOptions.plist"
+          echo "$EXPORT_OPTIONS_PLIST" | base64 --decode -o "$EXPORT_OPTIONS_PATH"
           xcodebuild -exportArchive \
             -archivePath "$GITHUB_WORKSPACE/$BUILD_PATH/$PROJECT_NAME.xcarchive" \
-            -exportOptionsPlist "$GITHUB_WORKSPACE/$NOTIFICATION_PROJECT_PATH/ExportOptions.plist" \
+            -exportOptionsPlist "$EXPORT_OPTIONS_PATH" \
             -exportPath "$GITHUB_WORKSPACE/$BUILD_PATH"
       - name: Notarize App
         env:
