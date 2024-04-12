@@ -14,6 +14,7 @@ env:
 jobs:
   notifications-build:
     uses: ./.github/workflows/notifications.yml
+    secrets: inherit
 
   package-build:
     name: Build PyPI Package
