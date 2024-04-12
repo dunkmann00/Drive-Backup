@@ -20,8 +20,6 @@ jobs:
     name: Build PyPI Package
     needs: notifications-build
     runs-on: ubuntu-22.04
-    env:
-      PIPX_DEFAULT_PYTHON: ${{ steps.python.outputs.python-path }}
     defaults:
       run:
         shell: bash
@@ -33,6 +31,10 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
+      - name: Set pipx default python
+        env:
+          PIPX_DEFAULT_PYTHON: ${{ steps.python.outputs.python-path }}
+        run: echo "PIPX_DEFAULT_PYTHON=$PIPX_DEFAULT_PYTHON" >> "$GITHUB_ENV"
       - name: Setup Poetry
         uses: ./.github/actions/setup-poetry
       - name: Get notification apps
