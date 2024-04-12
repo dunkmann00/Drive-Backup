@@ -50,9 +50,11 @@ jobs:
           WINDOWS_BUILD_PATH: ${{ needs.notifications-build.outputs.windows-build-path }}
         run: |
           # macOS Notifications App
+          mkdir "$MACOS_BUILD_PATH"
           unzip "$ARTIFACTS_PATH/$MACOS_ARTIFACT_NAME.zip" -d "$MACOS_BUILD_PATH"
 
           # Windows Notifications App
+          mkdir "$WINDOWS_BUILD_PATH"
           unzip "$ARTIFACTS_PATH/$WINDOWS_ARTIFACT_NAME.zip" -d "$WINDOWS_BUILD_PATH"
       - name: Build package sdist & wheel
         run: poetry build
@@ -111,7 +113,9 @@ jobs:
         env:
           NOTIFICATION_NAME: ${{ matrix.notifications.artifact-name }}
           NOTFICATION_BUILD: ${{ matrix.notifications.build-path }}
-        run: python -c "import shutil; shutil.unpack_archive('$NOTFICATION_BUILD/$NOTIFICATION_NAME.zip', '$NOTFICATION_BUILD')"
+        run: |
+          mkdir "$NOTFICATION_BUILD"
+          python -c "import shutil; shutil.unpack_archive('$NOTFICATION_BUILD/$NOTIFICATION_NAME.zip', '$NOTFICATION_BUILD')"
       - name: Build app binary
         env:
           MACOS_CODESIGN_IDENTITY: ${{ secrets.PROD_MACOS_CERTIFICATE_IDENTITY }}
