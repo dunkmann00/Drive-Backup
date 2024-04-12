@@ -11,5 +11,5 @@ runs:
         poetry config virtualenvs.in-project true
         pipx inject poetry poetry-plugin-export==1.7.1
         # Handle paths correctly whether on windows or otherwise
-        pipx inject poetry $(python -c "import pathlib; print( str(pathlib.Path.cwd() / 'poetry-plugins' / 'poetry-plugin-pin-build') )")"
-        pipx inject poetry $(python -c "import pathlib; print( str(pathlib.Path.cwd() / 'poetry-plugins' / 'poetry-plugin-universal2-wheel') )")"
+        pipx inject poetry "$(python -c "import pathlib; print( str(pathlib.Path.cwd() / 'poetry-plugins' / 'poetry-plugin-pin-build') )")"
+        pipx inject poetry "$(python -c "import pathlib; print( str(pathlib.Path.cwd() / 'poetry-plugins' / 'poetry-plugin-universal2-wheel') )")"
