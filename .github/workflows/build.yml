@@ -9,10 +9,57 @@ on:
 
 env:
   PYTHONUNBUFFERED: 1
+  PYTHON_VERSION: "3.11"
 
 jobs:
   notifications-build:
     uses: ./.github/workflows/notifications.yml
+
+  package-build:
+    name: Build PyPI Package
+    needs: notifications-build
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Setup Poetry
+        uses: ./.github/actions/setup-poetry
+      - name: Install Drive Backup package & dependencies
+        run: poetry install
+      - name: Get notification apps
+        id: download-notifications
+        uses: actions/download-artifact@v4
+        with:
+          path: ${{ github.workspace }}/notifications-artifacts
+          pattern: ${{ needs.notifications-build.outputs.artifact-project-name }}*
+          merge-multiple: true
+      - name: Unzip & move notifications apps
+        env:
+          ARTIFACTS_PATH: ${{ steps.download-notifications.outputs.download-path }}
+          MACOS_ARTIFACT_NAME: ${{ needs.notifications-build.outputs.macos-artifact-name }}
+          MACOS_BUILD_PATH: ${{ needs.notifications-build.outputs.macos-build-path }}
+          WINDOWS_ARTIFACT_NAME: ${{ needs.notifications-build.outputs.windows-artifact-name }}
+          WINDOWS_BUILD_PATH: ${{ needs.notifications-build.outputs.windows-build-path }}
+        run: |
+          # macOS Notifications App
+          unzip "$ARTIFACTS_PATH/$MACOS_ARTIFACT_NAME.zip" -d "$MACOS_BUILD_PATH"
+
+          # Windows Notifications App
+          unzip "$ARTIFACTS_PATH/$WINDOWS_ARTIFACT_NAME.zip" -d "$WINDOWS_BUILD_PATH"
+      - name: Build package sdist & wheel
+        run: poetry build
+      - name: Upload package sdist & wheel
+        uses: actions/upload-artifact@v4
+        with:
+          name: pypi-package-build
+          path: ./dist
 
   binary-build:
     name: Build ${{ matrix.os }} App Binary
@@ -40,7 +87,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: ${{ env.PYTHON_VERSION }}
       - name: Setup Poetry
         uses: ./.github/actions/setup-poetry
       - name: Setup Keychain (macOS)
@@ -61,7 +108,7 @@ jobs:
       - name: Unzip notification app (macOS & Windows)
         if: runner.os == 'macOS' || runner.os == 'Windows'
         env:
-          NOTIFICATION_NAME: ${{ needs.notifications-build.outputs.project-name }}
+          NOTIFICATION_NAME: ${{ matrix.notifications.artifact-name }}
           NOTFICATION_BUILD: ${{ matrix.notifications.build-path }}
         run: python -c "import shutil; shutil.unpack_archive('$NOTFICATION_BUILD/$NOTIFICATION_NAME.zip', '$NOTFICATION_BUILD')"
       - name: Build app binary
@@ -76,7 +123,7 @@ jobs:
           MACOS_NOTARIZATION_PWD: ${{ secrets.PROD_MACOS_NOTARIZATION_PWD }}
         run: |
           echo "Create Zip Archive"
-          ZIP_PATH=$(poetry run python app-build.py archive --format zip)
+          ZIP_PATH="$(poetry run python app-build.py archive --format zip)"
 
           # Here we send the notarization request to Apple's Notarization service, waiting for the result.
           # This typically takes a few seconds inside a CI environment, but it might take more depending on the App
@@ -118,11 +165,11 @@ jobs:
       - name: Archive app
         run: |
           # Build the archive and store the path to it
-          ARCHIVE_PATH=$(poetry run python app-build.py archive --name $ARCHIVE_NAME)
+          ARCHIVE_PATH="$(poetry run python app-build.py archive --archive-name "$ARCHIVE_NAME")"
 
           # Store the archive path as an environment variable
           echo "ARCHIVE_PATH=$ARCHIVE_PATH" >> "$GITHUB_ENV"
-      - name: Upload archive artifact
+      - name: Upload binary archive
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.ARCHIVE_NAME }}

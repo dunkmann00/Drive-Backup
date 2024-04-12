@@ -12,6 +12,9 @@ on:
       project-name:
         description: Name of the notification apps (they both use the same name).
         value: ${{ jobs.mac-notifications.outputs.project-name }}
+      artifact-project-name:
+        description: Artifact name of the notification apps without the platform.
+        value: ${{ jobs.mac-notifications.outputs.artifact-project-name }}
       macos-build-path:
         description: Path to the macOS notification app build directory.
         value: ${{ jobs.mac-notifications.outputs.build-path }}
@@ -42,6 +45,7 @@ jobs:
       NOTIFICATION_PROJECT_PATH: ${{ github.workspace }}/src/drive_backup/core/notifications/mac
     outputs:
       project-name: ${{ steps.setup-variables.outputs.PROJECT_NAME }}
+      artifact-project-name: ${{ steps.setup-variables.outputs.ARTIFACT_PROJECT_NAME }}
       build-path: ${{ steps.setup-variables.outputs.BUILD_PATH }}
       artifact-name: ${{ steps.setup-variables.outputs.ARTIFACT_NAME }}
     steps:
@@ -51,16 +55,18 @@ jobs:
       - name: Setup Env Variables
         id: setup-variables
         run: |
+          ARTIFACT_PROJECT_NAME="$(echo "$PROJECT_NAME" | tr " " _)"
+          ARTIFACT_NAME="$ARTIFACT_PROJECT_NAME-macos"
+          echo "ARTIFACT_NAME=$ARTIFACT_NAME" >> "$GITHUB_ENV"
+
           BUILD_PATH="$NOTIFICATION_PROJECT_PATH/build"
           echo "BUILD_PATH=$BUILD_PATH" >> "$GITHUB_ENV"
           echo "APP_PATH=$BUILD_PATH/$PROJECT_NAME.app" >> "$GITHUB_ENV"
-          echo "ZIP_PATH=$BUILD_PATH/$PROJECT_NAME.zip" >> "$GITHUB_ENV"
-
-          ARTIFACT_NAME="$(echo "$PROJECT_NAME" | tr " " _)-macos"
-          echo "ARTIFACT_NAME=$ARTIFACT_NAME" >> "$GITHUB_ENV"
+          echo "ZIP_PATH=$BUILD_PATH/$ARTIFACT_NAME.zip" >> "$GITHUB_ENV"
 
           echo "PROJECT_NAME=$PROJECT_NAME" >> "$GITHUB_OUTPUT"
           echo "BUILD_PATH=$BUILD_PATH" >> "$GITHUB_OUTPUT"
+          echo "ARTIFACT_PROJECT_NAME=$ARTIFACT_PROJECT_NAME" >> "$GITHUB_OUTPUT"
           echo "ARTIFACT_NAME=$ARTIFACT_NAME" >> "$GITHUB_OUTPUT"
       - name: Checkout
         uses: actions/checkout@v4
@@ -138,13 +144,13 @@ jobs:
       - name: Setup Env Variables
         id: setup-variables
         run: |
+          $ARTIFACT_NAME=$env:PROJECT_NAME.Replace(" ","_") + "-windows"
+          echo "ARTIFACT_NAME=$ARTIFACT_NAME" >> "$env:GITHUB_ENV"
+
           $BUILD_PATH="$env:NOTIFICATION_PROJECT_PATH\build"
           echo "BUILD_PATH=$BUILD_PATH" >> "$env:GITHUB_ENV"
           echo "EXE_PATH=$BUILD_PATH\$env:PROJECT_NAME.exe" >> "$env:GITHUB_ENV"
-          echo "ZIP_PATH=$BUILD_PATH\$env:PROJECT_NAME.zip" >> "$env:GITHUB_ENV"
-
-          $ARTIFACT_NAME=$env:PROJECT_NAME.Replace(" ","_") + "-windows"
-          echo "ARTIFACT_NAME=$ARTIFACT_NAME" >> "$env:GITHUB_ENV"
+          echo "ZIP_PATH=$BUILD_PATH\$env:ARTIFACT_NAME.zip" >> "$env:GITHUB_ENV"
 
           echo "BUILD_PATH=$BUILD_PATH" >> "$env:GITHUB_OUTPUT"
           echo "ARTIFACT_NAME=$ARTIFACT_NAME" >> "$env:GITHUB_OUTPUT"
