@@ -12,20 +12,17 @@ on:
       project-name:
         description: Name of the notification apps (they both use the same name).
         value: ${{ jobs.mac-notifications.outputs.project-name }}
-      artifact-project-name:
-        description: Artifact name of the notification apps without the platform.
-        value: ${{ jobs.mac-notifications.outputs.artifact-project-name }}
       macos-build-path:
-        description: Path to the macOS notification app build directory.
+        description: Path to the macOS notification app build directory (relative).
         value: ${{ jobs.mac-notifications.outputs.build-path }}
       macos-artifact-name:
         description: The name of the artifact for the macOS build.
         value: ${{ jobs.mac-notifications.outputs.artifact-name }}
       windows-build-path:
-        description: Path to the Windows notification app build directory.
+        description: Path to the Windows notification app build directory (relative).
         value: ${{ jobs.windows-notifications.outputs.build-path }}
       windows-posix-build-path:
-        description: Posix path to the Windows notification app build directory.
+        description: Posix path to the Windows notification app build directory (relative).
         value: ${{ jobs.windows-notifications.outputs.posix-build-path }}
       windows-artifact-name:
         description: The name of the artifact for the Windows build.
@@ -45,21 +42,21 @@ jobs:
       run:
         shell: bash
     env:
-      NOTIFICATION_PROJECT_PATH: ./src/drive_backup/core/notifications/mac
+      NOTIFICATION_PROJECT_PATH: src/drive_backup/core/notifications/mac
     outputs:
       project-name: ${{ steps.setup-variables.outputs.PROJECT_NAME }}
-      artifact-project-name: ${{ steps.setup-variables.outputs.ARTIFACT_PROJECT_NAME }}
       build-path: ${{ steps.setup-variables.outputs.BUILD_PATH }}
       artifact-name: ${{ steps.setup-variables.outputs.ARTIFACT_NAME }}
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
       - name: Setup Xcode
         # https://github.com/actions/runner-images/blob/main/images/macos/macos-14-arm64-Readme.md#xcode
         run: sudo xcode-select -s /Applications/Xcode_15.3.app
       - name: Setup Env Variables
         id: setup-variables
         run: |
-          ARTIFACT_PROJECT_NAME="$(echo "$PROJECT_NAME" | tr " " _)"
-          ARTIFACT_NAME="$ARTIFACT_PROJECT_NAME-macos"
+          ARTIFACT_NAME="$(echo "$PROJECT_NAME" | tr " " _)-macos"
           echo "ARTIFACT_NAME=$ARTIFACT_NAME" >> "$GITHUB_ENV"
 
           BUILD_PATH="$NOTIFICATION_PROJECT_PATH/build"
@@ -69,10 +66,7 @@ jobs:
 
           echo "PROJECT_NAME=$PROJECT_NAME" >> "$GITHUB_OUTPUT"
           echo "BUILD_PATH=$BUILD_PATH" >> "$GITHUB_OUTPUT"
-          echo "ARTIFACT_PROJECT_NAME=$ARTIFACT_PROJECT_NAME" >> "$GITHUB_OUTPUT"
           echo "ARTIFACT_NAME=$ARTIFACT_NAME" >> "$GITHUB_OUTPUT"
-      - name: Checkout
-        uses: actions/checkout@v4
       - name: Setup keychain
         uses: ./.github/actions/setup-keychain
         with:
@@ -84,18 +78,18 @@ jobs:
         # https://www.andrewhoog.com/post/how-to-build-an-ios-app-with-github-actions-2023/
         run: |
           xcodebuild -disableAutomaticPackageResolution \
-            -project "$NOTIFICATION_PROJECT_PATH/$PROJECT_NAME/$PROJECT_NAME.xcodeproj" \
+            -project "$GITHUB_WORKSPACE/$NOTIFICATION_PROJECT_PATH/$PROJECT_NAME/$PROJECT_NAME.xcodeproj" \
             -scheme "$PROJECT_NAME" \
             -sdk macosx \
             -destination "generic/platform=macOS" \
-            -archivePath "$BUILD_PATH/$PROJECT_NAME.xcarchive" \
+            -archivePath "$GITHUB_WORKSPACE/$BUILD_PATH/$PROJECT_NAME.xcarchive" \
             clean archive
       - name: Export Xcode Archive
         run: |
           xcodebuild -exportArchive \
-            -archivePath "$BUILD_PATH/$PROJECT_NAME.xcarchive" \
-            -exportOptionsPlist "$NOTIFICATION_PROJECT_PATH/ExportOptions.plist" \
-            -exportPath $BUILD_PATH
+            -archivePath "$GITHUB_WORKSPACE/$BUILD_PATH/$PROJECT_NAME.xcarchive" \
+            -exportOptionsPlist "$GITHUB_WORKSPACE/$NOTIFICATION_PROJECT_PATH/ExportOptions.plist" \
+            -exportPath "$GITHUB_WORKSPACE/$BUILD_PATH"
       - name: Notarize App
         env:
           MACOS_NOTARIZATION_APPLE_ID: ${{ secrets.PROD_MACOS_NOTARIZATION_APPLE_ID }}
@@ -103,7 +97,7 @@ jobs:
           MACOS_NOTARIZATION_PWD: ${{ secrets.PROD_MACOS_NOTARIZATION_PWD }}
         run: |
           echo "Create Zip Archive"
-          ditto -c -k --keepParent "$APP_PATH" "$ZIP_PATH"
+          ditto -c -k --keepParent "$GITHUB_WORKSPACE/$APP_PATH" "$GITHUB_WORKSPACE/$ZIP_PATH"
 
           # Here we send the notarization request to Apple's Notarization service, waiting for the result.
           # This typically takes a few seconds inside a CI environment, but it might take more depending on the App
@@ -111,7 +105,7 @@ jobs:
           # UI password dialog from blocking the CI
 
           echo "Notarize app"
-          xcrun notarytool submit "$ZIP_PATH" \
+          xcrun notarytool submit "$GITHUB_WORKSPACE/$ZIP_PATH" \
             --apple-id "$MACOS_NOTARIZATION_APPLE_ID" \
             --team-id "$MACOS_NOTARIZATION_TEAM_ID" \
             --password "$MACOS_NOTARIZATION_PWD" \
@@ -120,31 +114,32 @@ jobs:
           # Finally, we need to "attach the staple" to our executable, which will allow our app to be
           # validated by macOS even when an internet connection is not available.
           echo "Attach staple"
-          xcrun stapler staple "$APP_PATH"
+          xcrun stapler staple "$GITHUB_WORKSPACE/$APP_PATH"
       - name: Zip App Bundle
         run: |
           # We need to Zip the app again to upload the stapled version as an artifact.
-          rm "$ZIP_PATH"
-          ditto -c -k --keepParent "$APP_PATH" "$ZIP_PATH"
+          rm "$GITHUB_WORKSPACE/$ZIP_PATH"
+          ditto -c -k --keepParent "$GITHUB_WORKSPACE/$APP_PATH" "$GITHUB_WORKSPACE/$ZIP_PATH"
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: "${{ env.ARTIFACT_NAME }}"
-          path: "${{ env.ZIP_PATH }}"
+          path: "${{ github.workspace }}/${{ env.ZIP_PATH }}"
+
   windows-notifications:
     name: Build Windows Notification App
     runs-on: windows-2022
     env:
-      NOTIFICATION_PROJECT_PATH: .\src\drive_backup\core\notifications\windows
+      NOTIFICATION_PROJECT_PATH: src\drive_backup\core\notifications\windows
     outputs:
       build-path: ${{ steps.setup-variables.outputs.BUILD_PATH }}
       posix-build-path: ${{ steps.setup-variables.outputs.POSIX_BUILD_PATH }}
       artifact-name: ${{ steps.setup-variables.outputs.ARTIFACT_NAME }}
     steps:
-      - name: Setup MSBuild
-        uses: microsoft/setup-msbuild@v2
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
       - name: Setup Env Variables
         id: setup-variables
         run: |
@@ -163,16 +158,16 @@ jobs:
           echo "ARTIFACT_NAME=$ARTIFACT_NAME" >> "$env:GITHUB_OUTPUT"
       - name: Build VS Project
         run: |
-          msbuild "$env:NOTIFICATION_PROJECT_PATH\$env:PROJECT_NAME\$env:PROJECT_NAME.vcxproj" `
+          msbuild "$env:GITHUB_WORKSPACE\$env:NOTIFICATION_PROJECT_PATH\$env:PROJECT_NAME\$env:PROJECT_NAME.vcxproj" `
             -t:rebuild `
             -verbosity:diag `
             -property:Configuration=Release `
             -property:Platform=x64 `
-            -property:OutDir="$env:BUILD_PATH\"
+            -property:OutDir="$env:GITHUB_WORKSPACE\$env:BUILD_PATH\"
       - name: Zip App
-        run: Compress-Archive -Path "$env:EXE_PATH" -DestinationPath "$env:ZIP_PATH"
+        run: Compress-Archive -Path "$env:GITHUB_WORKSPACE\$env:EXE_PATH" -DestinationPath "$env:GITHUB_WORKSPACE\$env:ZIP_PATH"
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: "${{ env.ARTIFACT_NAME }}"
-          path: "${{ env.ZIP_PATH }}"
+          path: "${{ github.workspace }}\\${{ env.ZIP_PATH }}"

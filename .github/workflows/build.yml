@@ -39,7 +39,9 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: ${{ github.workspace }}/notifications-artifacts
-          pattern: ${{ needs.notifications-build.outputs.artifact-project-name }}*
+          pattern: |
+            ${{ needs.notifications-build.outputs.macos-artifact-name }}
+            ${{ needs.notifications-build.outputs.windows-artifact-name }}
           merge-multiple: true
       - name: Unzip & move notifications apps
         env:
@@ -50,12 +52,12 @@ jobs:
           WINDOWS_BUILD_PATH: ${{ needs.notifications-build.outputs.windows-posix-build-path }}
         run: |
           # macOS Notifications App
-          mkdir "$MACOS_BUILD_PATH"
-          unzip "$ARTIFACTS_PATH/$MACOS_ARTIFACT_NAME.zip" -d "$MACOS_BUILD_PATH"
+          mkdir "$GITHUB_WORKSPACE/$MACOS_BUILD_PATH"
+          unzip "$ARTIFACTS_PATH/$MACOS_ARTIFACT_NAME.zip" -d "$GITHUB_WORKSPACE/$MACOS_BUILD_PATH"
 
           # Windows Notifications App
-          mkdir "$WINDOWS_BUILD_PATH"
-          unzip "$ARTIFACTS_PATH/$WINDOWS_ARTIFACT_NAME.zip" -d "$WINDOWS_BUILD_PATH"
+          mkdir "$GITHUB_WORKSPACE/$WINDOWS_BUILD_PATH"
+          unzip "$ARTIFACTS_PATH/$WINDOWS_ARTIFACT_NAME.zip" -d "$GITHUB_WORKSPACE/$WINDOWS_BUILD_PATH"
       - name: Build package sdist & wheel
         run: poetry build
       - name: Upload package sdist & wheel
@@ -78,11 +80,11 @@ jobs:
           - os: macos-14
             notifications:
               artifact-name: ${{ needs.notifications-build.outputs.macos-artifact-name }}
-              build-path: ${{ needs.notifications-build.outputs.macos-build-path }}
+              build-path: ${{ github.workspace }}/${{ needs.notifications-build.outputs.macos-build-path }}
           - os: windows-2022
             notifications:
               artifact-name: ${{ needs.notifications-build.outputs.windows-artifact-name }}
-              build-path: ${{ needs.notifications-build.outputs.windows-build-path }}
+              build-path: ${{ github.workspace }}\${{ needs.notifications-build.outputs.windows-build-path }}
           - os: ubuntu-22.04
     steps:
       - name: Checkout
@@ -115,7 +117,13 @@ jobs:
           NOTFICATION_BUILD: ${{ matrix.notifications.build-path }}
         run: |
           mkdir "$NOTFICATION_BUILD"
-          python -c "import shutil; shutil.unpack_archive('$NOTFICATION_BUILD/$NOTIFICATION_NAME.zip', '$NOTFICATION_BUILD')"
+          python -c "
+          from pathlib import Path
+          import shutil
+
+          zip_path = Path('$NOTFICATION_BUILD') / '$NOTIFICATION_NAME.zip'
+          shutil.unpack_archive(zip_path, '$NOTFICATION_BUILD')
+          "
       - name: Build app binary
         env:
           MACOS_CODESIGN_IDENTITY: ${{ secrets.PROD_MACOS_CERTIFICATE_IDENTITY }}
