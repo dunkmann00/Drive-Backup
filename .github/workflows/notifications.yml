@@ -154,7 +154,7 @@ jobs:
           $BUILD_PATH="$env:NOTIFICATION_PROJECT_PATH\build"
           echo "BUILD_PATH=$BUILD_PATH" >> "$env:GITHUB_ENV"
           echo "EXE_PATH=$BUILD_PATH\$env:PROJECT_NAME.exe" >> "$env:GITHUB_ENV"
-          echo "ZIP_PATH=$BUILD_PATH\$env:ARTIFACT_NAME.zip" >> "$env:GITHUB_ENV"
+          echo "ZIP_PATH=$BUILD_PATH\$ARTIFACT_NAME.zip" >> "$env:GITHUB_ENV"
 
           $POSIX_BUILD_PATH=python -c "import pathlib; print( pathlib.Path('$BUILD_PATH').as_posix() )"
 
