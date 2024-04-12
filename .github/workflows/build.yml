@@ -39,9 +39,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: ${{ github.workspace }}/notifications-artifacts
-          pattern: |
-            ${{ needs.notifications-build.outputs.macos-artifact-name }}
-            ${{ needs.notifications-build.outputs.windows-artifact-name }}
+          pattern: "{${{ needs.notifications-build.outputs.macos-artifact-name }},${{ needs.notifications-build.outputs.windows-artifact-name }}}"
           merge-multiple: true
       - name: Unzip & move notifications apps
         env:
