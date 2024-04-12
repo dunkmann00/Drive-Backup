@@ -20,6 +20,8 @@ jobs:
     name: Build PyPI Package
     needs: notifications-build
     runs-on: ubuntu-22.04
+    env:
+      PIPX_DEFAULT_PYTHON: ${{ steps.python.outputs.python-path }}
     defaults:
       run:
         shell: bash
@@ -27,6 +29,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Setup Python
+        id: python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
