@@ -24,7 +24,7 @@ classifiers = [
 ]
 exclude = ["src/drive_backup/core/notifications/*/Drive Backup Notifications"]
 include = [
-    { path = "src/drive_backup/core/notifications/mac/build/Drive Backup Notifications.app", format = ["sdist", "wheel"] },
+    { path = "src/drive_backup/core/notifications/mac/build/Drive Backup Notifications.app/**/*", format = ["sdist", "wheel"] },
     { path = "src/drive_backup/core/notifications/windows/build/Drive Backup Notifications.exe", format = ["sdist", "wheel"] },
     { path = "Privacy.md", format = ["sdist"] }
 ]
