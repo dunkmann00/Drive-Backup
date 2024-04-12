@@ -32,8 +32,6 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Setup Poetry
         uses: ./.github/actions/setup-poetry
-      - name: Install Drive Backup package & dependencies
-        run: poetry install
       - name: Get notification apps
         id: download-notifications
         uses: actions/download-artifact@v4
