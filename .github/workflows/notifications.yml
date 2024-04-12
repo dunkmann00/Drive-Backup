@@ -24,6 +24,9 @@ on:
       windows-build-path:
         description: Path to the Windows notification app build directory.
         value: ${{ jobs.windows-notifications.outputs.build-path }}
+      windows-posix-build-path:
+        description: Posix path to the Windows notification app build directory.
+        value: ${{ jobs.windows-notifications.outputs.posix-build-path }}
       windows-artifact-name:
         description: The name of the artifact for the Windows build.
         value: ${{ jobs.windows-notifications.outputs.artifact-name }}
@@ -42,7 +45,7 @@ jobs:
       run:
         shell: bash
     env:
-      NOTIFICATION_PROJECT_PATH: ${{ github.workspace }}/src/drive_backup/core/notifications/mac
+      NOTIFICATION_PROJECT_PATH: ./src/drive_backup/core/notifications/mac
     outputs:
       project-name: ${{ steps.setup-variables.outputs.PROJECT_NAME }}
       artifact-project-name: ${{ steps.setup-variables.outputs.ARTIFACT_PROJECT_NAME }}
@@ -132,9 +135,10 @@ jobs:
     name: Build Windows Notification App
     runs-on: windows-2022
     env:
-      NOTIFICATION_PROJECT_PATH: ${{ github.workspace }}\src\drive_backup\core\notifications\windows
+      NOTIFICATION_PROJECT_PATH: .\src\drive_backup\core\notifications\windows
     outputs:
       build-path: ${{ steps.setup-variables.outputs.BUILD_PATH }}
+      posix-build-path: ${{ steps.setup-variables.outputs.POSIX_BUILD_PATH }}
       artifact-name: ${{ steps.setup-variables.outputs.ARTIFACT_NAME }}
     steps:
       - name: Setup MSBuild
@@ -152,7 +156,10 @@ jobs:
           echo "EXE_PATH=$BUILD_PATH\$env:PROJECT_NAME.exe" >> "$env:GITHUB_ENV"
           echo "ZIP_PATH=$BUILD_PATH\$env:ARTIFACT_NAME.zip" >> "$env:GITHUB_ENV"
 
+          $POSIX_BUILD_PATH=python -c "import pathlib; print( pathlib.Path('$BUILD_PATH').as_posix() )"
+
           echo "BUILD_PATH=$BUILD_PATH" >> "$env:GITHUB_OUTPUT"
+          echo "POSIX_BUILD_PATH=$POSIX_BUILD_PATH" >> "$env:GITHUB_OUTPUT"
           echo "ARTIFACT_NAME=$ARTIFACT_NAME" >> "$env:GITHUB_OUTPUT"
       - name: Build VS Project
         run: |

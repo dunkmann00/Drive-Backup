@@ -47,7 +47,7 @@ jobs:
           MACOS_ARTIFACT_NAME: ${{ needs.notifications-build.outputs.macos-artifact-name }}
           MACOS_BUILD_PATH: ${{ needs.notifications-build.outputs.macos-build-path }}
           WINDOWS_ARTIFACT_NAME: ${{ needs.notifications-build.outputs.windows-artifact-name }}
-          WINDOWS_BUILD_PATH: ${{ needs.notifications-build.outputs.windows-build-path }}
+          WINDOWS_BUILD_PATH: ${{ needs.notifications-build.outputs.windows-posix-build-path }}
         run: |
           # macOS Notifications App
           mkdir "$MACOS_BUILD_PATH"
