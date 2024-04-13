@@ -73,6 +73,8 @@ def add_notifications(app_path):
         elif platform.system() == "Windows":
             print("Copying windows notifications app into app build.", file=sys.stderr)
             src_path = src_path / f"{NOTIFICATIONS_PROJECT_NAME}.exe"
+            if not dst_path.exists():
+                dst_path.mkdir(parents=True)
             shutil.copy2(src_path, dst_path)
 
 @cli.command()
