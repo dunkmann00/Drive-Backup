@@ -80,11 +80,11 @@ jobs:
           - os: macos-14
             notifications:
               artifact-name: ${{ needs.notifications-build.outputs.macos-artifact-name }}
-              build-path: ${{ github.workspace }}/${{ needs.notifications-build.outputs.macos-build-path }}
+              build-path: ./${{ needs.notifications-build.outputs.macos-build-path }}
           - os: windows-2022
             notifications:
               artifact-name: ${{ needs.notifications-build.outputs.windows-artifact-name }}
-              build-path: ${{ github.workspace }}\${{ needs.notifications-build.outputs.windows-build-path }}
+              build-path: .\${{ needs.notifications-build.outputs.windows-build-path }}
           - os: ubuntu-22.04
     steps:
       - name: Checkout
@@ -125,8 +125,8 @@ jobs:
           from pathlib import Path
           import shutil
 
-          zip_path = Path('$NOTFICATION_BUILD') / '$NOTIFICATION_NAME.zip'
-          shutil.unpack_archive(zip_path, '$NOTFICATION_BUILD')
+          zip_path = Path(r'$NOTFICATION_BUILD') / '$NOTIFICATION_NAME.zip'
+          shutil.unpack_archive(zip_path, r'$NOTFICATION_BUILD')
           "
       - name: Build app binary
         env:
