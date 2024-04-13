@@ -178,7 +178,7 @@ jobs:
           fi
 
           # Create the archive name and store as an environment varable
-          ARCHIVE_NAME=$(poetry run python app-build.py archive-name $VERSION)
+          ARCHIVE_NAME=$(poetry run python app-build.py archive-name --version $VERSION)
           echo "ARCHIVE_NAME=$ARCHIVE_NAME" >> "$GITHUB_ENV"
       - name: Archive app
         run: |
