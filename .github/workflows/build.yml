@@ -121,7 +121,6 @@ jobs:
           NOTIFICATION_NAME: ${{ matrix.build.notifications.artifact-name }}
           NOTFICATION_BUILD: ${{ matrix.build.notifications.build-path }}
         run: |
-          mkdir "$NOTFICATION_BUILD"
           python -c "
           from pathlib import Path
           import shutil
