@@ -3,10 +3,12 @@ from shlex import split
 from pathlib import Path
 import subprocess, platform, shutil, sys
 
-PYINSTALLER_BUILD_COMMAND = """
-pyinstaller src/drive_backup/__main__.py
+SCRIPT_PATH = Path.cwd() / "src/drive_backup/__main__.py"
+
+PYINSTALLER_BUILD_COMMAND = f"""
+pyinstaller "{SCRIPT_PATH}"
     --name "dbackup"
-    --distpath {distpath}
+    --distpath "{{distpath}}"
     --additional-hooks-dir hooks
     --clean
     --noconfirm
