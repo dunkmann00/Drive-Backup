@@ -67,12 +67,19 @@ jobs:
           echo "PROJECT_NAME=$PROJECT_NAME" >> "$GITHUB_OUTPUT"
           echo "BUILD_PATH=$BUILD_PATH" >> "$GITHUB_OUTPUT"
           echo "ARTIFACT_NAME=$ARTIFACT_NAME" >> "$GITHUB_OUTPUT"
+      - name: Get cache key prefix
+        run: |
+          CACHE_KEY_PREFIX="mac-notifications"
+          if [ "$GITHUB_EVENT_NAME" == "release" ]; then
+            $CACHE_KEY_PREFIX="$CACHE_KEY_PREFIX-release"
+          fi
+          echo "CACHE_KEY_PREFIX=$CACHE_KEY_PREFIX" >> "$GITHUB_ENV"
       - name: Cache macOS Notification App
         id: cache-mac-app
         uses: actions/cache@v4
         with:
           path: ${{ github.workspace }}/${{ env.ZIP_PATH }}
-          key: mac-notifications-${{ hashFiles('format("{0}/{1}/{2}", github.workspace, env.NOTIFICATION_PROJECT_PATH, env.PROJECT_NAME)','.github/workflows/notifications.yml') }}
+          key: ${{ env.CACHE_KEY_PREFIX }}-${{ hashFiles('format("{0}/{1}/{2}", github.workspace, env.NOTIFICATION_PROJECT_PATH, env.PROJECT_NAME)','.github/workflows/notifications.yml','pyproject.toml') }}
       - name: Setup keychain
         if: steps.cache-mac-app.outputs.cache-hit != 'true'
         uses: ./.github/actions/setup-keychain
@@ -171,12 +178,19 @@ jobs:
           echo "BUILD_PATH=$BUILD_PATH" >> "$env:GITHUB_OUTPUT"
           echo "POSIX_BUILD_PATH=$POSIX_BUILD_PATH" >> "$env:GITHUB_OUTPUT"
           echo "ARTIFACT_NAME=$ARTIFACT_NAME" >> "$env:GITHUB_OUTPUT"
+      - name: Get cache key prefix
+        run: |
+          $CACHE_KEY_PREFIX="windows-notifications"
+          if ("$env:GITHUB_EVENT_NAME" -eq "release") {
+            $CACHE_KEY_PREFIX=$CACHE_KEY_PREFIX + "-release"
+          }
+          echo "CACHE_KEY_PREFIX=$CACHE_KEY_PREFIX" >> "$env:GITHUB_ENV"
       - name: Cache Windows Notification App
         id: cache-windows-app
         uses: actions/cache@v4
         with:
           path: ${{ github.workspace }}/${{ env.ZIP_PATH }}
-          key: windows-notifications-${{ hashFiles('format("{0}\{1}\{2}", github.workspace, env.NOTIFICATION_PROJECT_PATH, env.PROJECT_NAME)','.github/workflows/notifications.yml') }}
+          key: ${{ env.CACHE_KEY_PREFIX }}-${{ hashFiles('format("{0}\{1}\{2}", github.workspace, env.NOTIFICATION_PROJECT_PATH, env.PROJECT_NAME)','.github\workflows\notifications.yml','pyproject.toml') }}
       - name: Build VS Project
         if: steps.cache-windows-app.outputs.cache-hit != 'true'
         run: |
