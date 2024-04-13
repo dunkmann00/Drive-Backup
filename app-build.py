@@ -39,9 +39,17 @@ def build(distpath, macos_codesign_identity, macos_target_arch):
     ret_code = subprocess.run(split(build_command.format(distpath=distpath))).returncode
     if ret_code != 0:
         return ret_code
-    print(f"Rename app directory to '{PROJECT_NAME}'.", file=sys.stderr)
     app_path = Path(distpath).resolve() / "dbackup"
-    app_path = app_path.rename(app_path.parent / PROJECT_NAME)
+    if platform.system() == "Darwin" and macos_codesign_identity is not None:
+        python_executable = next(app_path.glob("_internal/Python.framework/Versions/[.1-9]*/Python"))
+        ret_code = subprocess.run(["/usr/bin/codesign", "--force", "-s", macos_codesign_identity, "--timestamp", "--options", "runtime", str(python_executable), "-v"]).returncode
+        if ret_code != 0:
+            return ret_code
+    print(f"Rename app directory to '{PROJECT_NAME}'.", file=sys.stderr)
+    rename_path = app_path.parent / PROJECT_NAME
+    if rename_path.exists():
+        shutil.rmtree(str(rename_path))
+    app_path = app_path.rename(rename_path)
     print(f"Binary created at '{app_path}'", file=sys.stderr)
     print(str(app_path))
 
@@ -83,7 +91,14 @@ def archive(app_path, archive_path, archive_name, format):
         archive_path = archive_path.parent / archive_name
     format = format or ('zip' if platform.system() == 'Windows' else 'gztar')
     print(f"Creating a {format} archive of the app.", file=sys.stderr)
-    archive_name = shutil.make_archive(str(archive_path), format, root_dir=str(app_path.parent), base_dir=app_path.name)
+    # We need this to preseve symlinks...because shutil won't >:0
+    if format == "zip" and platform.system() == "Darwin":
+        archive_name = str(archive_path) + ".zip"
+        ret_code = subprocess.run(["ditto", "-c", "-k", "--keepParent", str(app_path), archive_name]).returncode
+        if ret_code != 0:
+            return ret_code
+    else:
+        archive_name = shutil.make_archive(str(archive_path), format, root_dir=str(app_path.parent), base_dir=app_path.name)
     print(f"Archive created at '{archive_name}'", file=sys.stderr)
     print(archive_name)
 
