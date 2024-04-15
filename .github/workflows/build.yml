@@ -164,11 +164,13 @@ jobs:
         if: runner.os == 'macOS' || runner.os == 'Windows'
         run: poetry run python app_build.py add-notifications
       - name: Get Archive Name
+        env:
+          RELEVANT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           # Get the project's version
           VERSION=$(poetry version -s)
           if [ "$GITHUB_EVENT_NAME" != "release" ]; then
-            VERSION="$VERSION+$(git rev-parse --short $GITHUB_SHA)"
+            VERSION="$VERSION+$(git rev-parse --short $RELEVANT_SHA)"
           fi
 
           # Create the archive name and store as an environment varable
