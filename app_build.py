@@ -115,7 +115,7 @@ def archive_name(version):
     if project_platform == "darwin":
         project_platform = "macos"
         project_arch = "universal2"
-    print(f"{project_name}-{version}-{project_arch}")
+    print(f"{project_name}-{version}-{project_platform}-{project_arch}")
 
 if __name__ == '__main__':
     cli()
