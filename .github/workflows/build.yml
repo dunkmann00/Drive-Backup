@@ -119,15 +119,10 @@ jobs:
         if: runner.os == 'macOS' || runner.os == 'Windows'
         env:
           NOTIFICATION_NAME: ${{ matrix.build.notifications.artifact-name }}
-          NOTFICATION_BUILD: ${{ matrix.build.notifications.build-path }}
+          NOTIFICATION_BUILD: ${{ matrix.build.notifications.build-path }}
         run: |
-          python -c "
-          from pathlib import Path
-          import shutil
-
-          zip_path = Path(r'$NOTFICATION_BUILD') / '$NOTIFICATION_NAME.zip'
-          shutil.unpack_archive(zip_path, r'$NOTFICATION_BUILD')
-          "
+          ZIP_PATH=$(python -c "import pathlib; print(pathlib.Path(r'$NOTIFICATION_BUILD') / '$NOTIFICATION_NAME.zip')")
+          unzip "$ZIP_PATH" -d "$NOTIFICATION_BUILD"
       - name: Build app binary
         env:
           MACOS_CODESIGN_IDENTITY: ${{ secrets.PROD_MACOS_CERTIFICATE_IDENTITY }}
