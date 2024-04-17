@@ -111,7 +111,7 @@ def archive(app_path, archive_path, archive_name, format):
 def archive_name(version):
     project_name = PROJECT_NAME.replace(" ", "_")
     project_platform = platform.system().lower()
-    project_arch = platform.machine()
+    project_arch = platform.machine().lower()
     if project_platform == "darwin":
         project_platform = "macos"
         project_arch = "universal2"
