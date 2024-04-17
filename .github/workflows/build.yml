@@ -4,8 +4,12 @@ on:
   push:
     branches: [main]
   pull_request:
-  release:
-    types: [published]
+
+  workflow_call:
+    outputs:
+      pypi-artifact-name:
+        description: The name of the artifact containing the python sdist and wheel for pypi.
+        value: ${{ jobs.package-build.outputs.artifact-name }}
 
 env:
   PYTHONUNBUFFERED: 1
@@ -23,6 +27,10 @@ jobs:
     defaults:
       run:
         shell: bash
+    env:
+      ARTIFACT_NAME: pypi-package-build
+    outputs:
+      artifact-name: ${{ env.ARTIFACT_NAME }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -63,8 +71,29 @@ jobs:
       - name: Upload package sdist & wheel
         uses: actions/upload-artifact@v4
         with:
-          name: pypi-package-build
+          name: ${{ env.ARTIFACT_NAME }}
           path: ./dist
+
+  publish-testpypi:
+    name: Publish package to TestPyPI
+    if: github.event.release == null
+    needs: package-build
+    runs-on: ubuntu-22.04
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/drive-backup
+    permissions:
+      id-token: write
+    steps:
+      - name: Download PyPI artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.package-build.outputs.artifact-name }}
+          path: dist
+      - name: Publish sdist and wheel on TestPyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
 
   binary-build:
     name: Build ${{ matrix.build.os }} App Binary
