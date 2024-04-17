@@ -31,6 +31,9 @@ jobs:
     name: Upload assets to GitHub Release
     needs: build
     runs-on: ubuntu-22.04
+    environment:
+      name: github-release
+      url: ${{ steps.upload-assets.outputs.url }}
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v4
@@ -38,6 +41,7 @@ jobs:
           path: dist
           merge-multiple: true
       - name: Upload release assets
+        id: upload-assets
         uses: softprops/action-gh-release@v2
         with:
           files: !(*Notifications*)
