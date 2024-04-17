@@ -9,7 +9,7 @@
 [![PyPI - Version](https://img.shields.io/pypi/v/drive-backup)](https://pypi.org/project/drive-backup/)
 [![GitHub Release](https://img.shields.io/github/v/release/dunkmann00/drive-backup?logo=github)](https://github.com/dunkmann00/Drive-Backup-Credentials/releases/latest)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/drive-backup)](https://pypi.org/project/drive-backup/)
-[![Release - Workflow](https://github.com/dunkmann00/Drive-Backup/actions/workflows/release.yml/badge.svg?branch=main)](https://github.com/dunkmann00/Drive-Backup/actions/workflows/release.yml)
+[![Build - Workflow](https://github.com/dunkmann00/Drive-Backup/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/dunkmann00/Drive-Backup/actions/workflows/build.yml)
 [![Github Pages - Workflow](https://github.com/dunkmann00/Drive-Backup/actions/workflows/github_pages.yml/badge.svg?branch=main)](https://github.com/dunkmann00/Drive-Backup/actions/workflows/github_pages.yml)
 [![License](https://img.shields.io/badge/License-MIT-maroon)](LICENSE.md)
 
