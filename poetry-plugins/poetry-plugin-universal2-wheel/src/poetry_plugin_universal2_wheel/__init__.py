@@ -161,7 +161,8 @@ class Universal2WheelPlugin(ApplicationPlugin):
         with InWheelCtx(wheel_path) as ctx:
             info = read_pkg_info(info_path)
             del info["Tag"]
-            info["Tag"] = str(list(tags)[0])
+            for tag in tags:
+                info["Tag"] = str(tag)
             write_pkg_info(info_path, info)
             ctx.out_wheel = wheel_path
 
