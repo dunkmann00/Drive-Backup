@@ -5,6 +5,8 @@ credentials_personal.json
 *drive-backup-icon-large.png
 macos-signing
 *ExportOptions.plist
+asciinema/*
+!asciinema/demo/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

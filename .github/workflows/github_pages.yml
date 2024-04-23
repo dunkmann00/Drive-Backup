@@ -44,6 +44,9 @@ jobs:
           sed -i 's#src/drive_backup/resources/drive-backup-icon.png#images/drive-backup-icon.png#g' $GHP_SOURCE_DIR/README.md
           # Update License links
           sed -i 's#LICENSE.md#LICENSE#g' $GHP_SOURCE_DIR/README.md
+          # Copy demo into Pages directory
+          mkdir -p $GHP_SOURCE_DIR/asciinema/demo
+          cp asciinema/demo/drive-backup-demo.gif $GHP_SOURCE_DIR/asciinema/demo
       - name: Build & Deploy
         id: gh_pages
         uses: dunkmann00/jekyll-v4-gh-pages@v1
