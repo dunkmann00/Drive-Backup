@@ -21,7 +21,9 @@ If you need to backup your Google Drive this is exactly the tool for you. It
 will fetch the files and folders you want to backup from your Google Drive and
 store them locally.
 
-![Drive Backup Demo](asciinema/demo/drive-backup-demo.gif)
+<!-- asciinema-start -->
+[![Drive Backup Demo](asciinema/demo/drive-backup-demo.gif)](https://asciinema.org/a/656056)
+<!-- asciinema-end -->
 
 ## Notable Features
 
