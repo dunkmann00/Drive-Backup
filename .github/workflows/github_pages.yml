@@ -48,7 +48,7 @@ jobs:
           mkdir -p $GHP_SOURCE_DIR/asciinema/demo
           cp asciinema/demo/drive-backup-demo.gif $GHP_SOURCE_DIR/asciinema/demo
           # Replace demo gif with asciinema player
-          perl -i -0777 -pe 's#<!-- asciinema-start -->(.*)<!-- asciinema-end -->#<script src="https://asciinema.org/a/656056.js" id="asciicast-656056" async="true"></script>#gs' $GHP_SOURCE_DIR/README.md
+          perl -i -0777 -pe 's#<!-- asciinema-start -->(.*)<!-- asciinema-end -->#<script src="https://asciinema.org/a/656228.js" id="asciicast-656228" async="true"></script>#gs' $GHP_SOURCE_DIR/README.md
       - name: Build & Deploy
         id: gh_pages
         uses: dunkmann00/jekyll-v4-gh-pages@v1
