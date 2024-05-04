@@ -167,6 +167,10 @@ custom client credential each time.
 dbackup backup --client-credentials path/to/your/personal/credentials.json
 ```
 
+## Privacy Policy
+
+Check out Drive Backup's [Privacy Policy](Privacy.md).
+
 ## Copyright and License
 
 Google Drive is a trademark of Google Inc. Use of this trademark is subject to
