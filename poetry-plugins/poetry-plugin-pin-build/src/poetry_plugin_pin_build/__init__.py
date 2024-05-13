@@ -19,11 +19,9 @@ NAME = "poetry-plugin-pin-build"
 
 class PinBuildPlugin(ApplicationPlugin):
     def activate(self, application: Application):
-        # Only run if the plugin is listed in the pyproject.toml
-        if application.poetry.pyproject.data.get("tool", {}).get(NAME) is not None:
-            application.event_dispatcher.add_listener(
-                COMMAND, self.pin_build
-            )
+        application.event_dispatcher.add_listener(
+            COMMAND, self.pin_build
+        )
 
     def pin_build(
         self,
@@ -33,6 +31,10 @@ class PinBuildPlugin(ApplicationPlugin):
     ) -> None:
         command = event.command
         if not isinstance(command, BuildCommand):
+            return
+
+        # Only run if the plugin is listed in the pyproject.toml
+        if command.poetry.pyproject.data.get("tool", {}).get(NAME) is None:
             return
 
         event.io.write_line(

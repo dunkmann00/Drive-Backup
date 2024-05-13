@@ -27,11 +27,9 @@ class Universal2WheelPlugin(ApplicationPlugin):
             )
             return
 
-        # Only run if the plugin is listed in the pyproject.toml
-        if application.poetry.pyproject.data.get("tool", {}).get(NAME) is not None:
-            application.event_dispatcher.add_listener(
-                TERMINATE, self.post_install
-            )
+        application.event_dispatcher.add_listener(
+            TERMINATE, self.post_install
+        )
 
     def post_install(
         self,
@@ -41,6 +39,10 @@ class Universal2WheelPlugin(ApplicationPlugin):
     ) -> None:
         command = event.command
         if not isinstance(command, InstallCommand):
+            return
+
+        # Only run if the plugin is listed in the pyproject.toml
+        if command.poetry.pyproject.data.get("tool", {}).get(NAME) is None:
             return
 
         io = event.io
