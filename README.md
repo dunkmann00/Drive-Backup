@@ -22,7 +22,7 @@ will fetch the files and folders you want to backup from your Google Drive and
 store them locally.
 
 <!-- asciinema-start -->
-[![Drive Backup Demo](asciinema/demo/drive-backup-demo.gif)](https://asciinema.org/a/656056)
+[![Drive Backup Demo](asciinema/demo/drive-backup-demo.gif)](https://asciinema.org/a/656228)
 <!-- asciinema-end -->
 
 ## Notable Features
