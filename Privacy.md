@@ -11,3 +11,8 @@ Other than downloading files from Google Drive to store them on the user's local
 filesystem and storing an OAuth token on the user's device, no other data is
 requested, used, or stored on the user's device or any other device on Drive
 Backup's behalf.
+
+No Google user data is shared, transferred, or disclosed with third-parties.
+
+All data is encrypted while downloading and stored directly onto the local
+drive.
