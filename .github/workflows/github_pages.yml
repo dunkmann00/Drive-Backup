@@ -37,11 +37,11 @@ jobs:
         run: |
           # Copy md files into Pages directory
           cp {README.md,Privacy.md,LICENSE.md} $GHP_SOURCE_DIR
-          # Copy the icon into an images sub-directory
-          mkdir $GHP_SOURCE_DIR/images
+          # Copy the icon into the images sub-directory
           cp src/drive_backup/resources/drive-backup-icon.png $GHP_SOURCE_DIR/images
-          # Update the icon links in the README
+          # Update the image links in the README
           sed -i 's#src/drive_backup/resources/drive-backup-icon.png#images/drive-backup-icon.png#g' $GHP_SOURCE_DIR/README.md
+          sed -i 's#pages/images/google-verification-warning.png#images/google-verification-warning.png#g' $GHP_SOURCE_DIR/README.md
           # Update md links
           sed -i 's#.md##g' $GHP_SOURCE_DIR/README.md
           # Copy demo gif into Pages directory

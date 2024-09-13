@@ -28,21 +28,21 @@ store them locally.
 ## Notable Features
 
 - Supports backing up either your entire Google Drive or a specific directory.
-- **FAST**, Drive Backup will first check if a file it wants to download was
-  already downloaded in a previous backup.
+- **Efficient**, Drive Backup will first check if a file it wants to download
+  was already downloaded in a previous backup.
 - Works through Google Drive API which uses OAuth 2.0 and sends all data
   securely over HTTPS.
 - Supports both Mac, Windows, & Linux.
 - Emits a notification when complete or when there is a problem (Mac & Windows
   only).
 - Choose between 3 backup types:
-  - complete
+  - **complete**
     - Creates a new backup, leaving previous backup untouched.
-  - increment
+  - **increment**
     - Creates a new backup, moving files that have not changed since the
       previous backup into the new backup, and leaving only old files remaining
       in the previous backup.
-  - update
+  - **update**
     - Update the previous backup in-place with the latest changes from your
       Google Drive.
 - Convert Google Document files (Docs, Sheets, Slides) into their corresponding
@@ -62,16 +62,24 @@ Drive Backup requires Python version 3.11 or higher.
 There are a few different ways to install Drive Backup and depending on your
 setup/need all of them are equally viable.
 
-### Prebuilt Binaries
-
-Download the prebuilt binaries from the
-[latest release](https://github.com/dunkmann00/Drive-Backup-Credentials/releases/latest).
-
 ### Via `pipx`
+
+If `pipx` is installed, it is the recommended way of installing Drive Backup.
 
 ```bash
 pipx install drive-backup
 ```
+
+### Via Prebuilt Binaries
+
+The prebuilt binaries are the next easiest way to get up and running. A unique
+benefit of the prebuilt binaries is the ability to place them wherever you like.
+If you are storing your files on an external drive, it may be covenient to also
+store the binaries there. That way, you could connect the external drive to any
+computer (...that you trust of course) and be able to easily backup from it.
+
+**Download the prebuilt binaries from the
+[latest release](https://github.com/dunkmann00/Drive-Backup-Credentials/releases/latest).**
 
 ### Via `git clone`
 
@@ -90,6 +98,14 @@ poetry run dbackup ...
 The first time Drive Backup is ran (or whenever there is no valid user signed
 in), a browser window will open asking you to sign in to Google and to give
 Drive Backup permission to download files from Google Drive.
+
+> [!IMPORTANT]
+> When Drive Backup requests your permission to access your Google
+  Drive Files, you will see a warning screen informing you "**Google hasn’t
+  verified this app**". This doesn't mean the app is actually dangerous, just
+  that it is not verified. This is currently unavoidable unfortunately. For more
+  info on why this is happening see the [App Verification](#app-verification)
+  section below.
 
 Below are some common examples to show how Drive Backup works. To see more info
 about all of the options and commands run `dbackup -h` or `dbackup [command] -h`
@@ -149,6 +165,44 @@ You can also check which user is currently logged in.
 ```bash
 dbackup user info
 ```
+
+### App Verification
+
+Drive Backup needs your permission to access your Google Drive files and
+folders. To do this, Drive Backup identifies itself to Google with an
+application client credential. You are then shown a webpage from Google, asking
+for your permission to allow Drive Backup the access it is requesting.
+
+Due to how Google has recently decided to handle verifying client apps, it was
+not possible for me to have Drive Backup verified. It would cost $500+ each year
+to be verified. Unfortunately, I am not willing/in a position to pay them that
+amount of money to verify a free app.
+
+The good news here is that Drive Backup will still function as it should even
+though it is not verified. However, when you are prompted to give the app
+permission to access your Google Drive, you will be met with a scary window that
+contains the following:
+
+![Google Verification Warning](pages/images/google-verification-warning.png)
+
+I can tell you that this app is not dangerous and will not do anything nefarious
+with your Google Drive data or any data on your computer. It also [doesn't
+collect any info from you](Privacy.md). But, since all the source code is open
+source and
+[availble for you to check out](https://github.com/dunkmann00/Drive-Backup),
+you don't have to take my word for that.
+
+To proceed through the permission request process and allow Drive Backup access
+to Google Drive, click on **"Advanced"** and then **"Go to Drive Backup
+(unsafe)"**. This will bring you to the page where you can allow Drive Backup to
+have access.
+
+I do hope none of this deters you from using Drive Backup, as it is a very
+useful tool that I use myself. If you don't want to use the built in app
+credential that ships with Drive Backup, you can look into
+[generating your own client credential](#custom-client-credentials) and use that
+instead. With this you can be even more certain Drive Backup only has the
+permissions it needs (i.e. Google Drive Read access).
 
 ### Custom Client Credentials
 
