@@ -59,8 +59,8 @@ store them locally.
 
 Drive Backup requires Python version 3.11 or higher.
 
-There are a few different ways to install Drive Backup and depending on your
-setup/need all of them are equally viable.
+There are a few different ways to install Drive Backup. Depending on your
+setup/need a different approach is recommended.
 
 ### Via `pipx`
 
@@ -199,7 +199,7 @@ have access.
 
 I do hope none of this deters you from using Drive Backup, as it is a very
 useful tool that I use myself. If you don't want to use the built in app
-credential that ships with Drive Backup, you can look into
+credential that ships with the app, you can look into
 [generating your own client credential](#custom-client-credentials) and use that
 instead. With this you can be even more certain Drive Backup only has the
 permissions it needs (i.e. Google Drive Read access).
@@ -207,13 +207,13 @@ permissions it needs (i.e. Google Drive Read access).
 ### Custom Client Credentials
 
 If you are having problems with Drive Backup and are hitting download limits,
-you can supply your own client credentials. To generate you own, check out the
+you can supply your own client credentials. To generate your own, check out the
 [Authorize credentials for a desktop application](https://developers.google.com/drive/api/quickstart/python#authorize_credentials_for_a_desktop_application)
 section on the Google Drive Python API Guide page. Once you have followed the
 steps and downloaded the json file, pass it into Drive Backup with the
 `--client-credentials` flag when you run a backup. Now Drive Backup will use
-your client credentials instead of the default one that ships with the tool.
-Note that this will get stored in the backup config `bkp` file, so if you are
+your client credentials instead of the default one that ships with the app. Note
+that this will get stored in the backup config `bkp` file, so if you are
 repeating a backup with `--backup-config` you don't need to explicitly pass the
 custom client credential each time.
 
