@@ -74,9 +74,7 @@ class Universal2WheelPlugin(ApplicationPlugin):
                         env.run_pip("download", "--only-binary=:all:", "--no-deps", "--platform", x86_64_platform, "--no-cache-dir", "-d", str(thin_download_dir), package_specifier, call=True, stdout=stdout)
                         arm64_whl = next(thin_download_dir.glob("*arm64.whl"))
                         x86_64_whl = next(thin_download_dir.glob("*x86_64.whl"))
-                        universal2_whl = Path(download_dir) / (x86_64_whl.name.removesuffix("x86_64.whl") + "universal2.whl")
-                        fuse_wheels(x86_64_whl, arm64_whl, universal2_whl)
-                        self.fix_wheel_tags(universal2_whl)
+                        fuse_wheels(x86_64_whl, arm64_whl, download_dir)
                     else: # Universal2 wheel exists on pypi, just download it
                         if io.is_verbose():
                             io.write_line(
@@ -154,19 +152,6 @@ class Universal2WheelPlugin(ApplicationPlugin):
                 if tag_str in file["file"]:
                     return not (tag.platform == "any" or "universal2" in tag.platform)
         return False # Its an sdist, there is no wheel
-
-    def fix_wheel_tags(self, wheel_path):
-        # delocate will leave the wheel tag whatever it was from the original
-        # file that gets copied in. This updates it to be universal2
-        name, version, _, tags = parse_wheel_filename(wheel_path.name)
-        info_path = Path(f"{name}-{version}.dist-info") / "WHEEL"
-        with InWheelCtx(wheel_path) as ctx:
-            info = read_pkg_info(info_path)
-            del info["Tag"]
-            for tag in tags:
-                info["Tag"] = str(tag)
-            write_pkg_info(info_path, info)
-            ctx.out_wheel = wheel_path
 
     @contextmanager
     def pip_download_dir(self, cache_wheels=False):
