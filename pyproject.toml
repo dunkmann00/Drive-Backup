@@ -1,0 +1,56 @@
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "drive-backup"
+version = "2.0.0"
+authors = ["George Waters <gwatersdev@gmail.com>"]
+description = "Backup your Google Drive files locally."
+readme = "README.md"
+license = "MIT"
+keywords = ["Google Drive", "backup"]
+homepage = "https://www.georgeh2os.com/Drive-Backup/"
+repository = "https://github.com/dunkmann00/Drive-Backup"
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Topic :: System :: Archiving :: Backup",
+    "Topic :: Utilities"
+]
+exclude = ["src/drive_backup/core/notifications/*/Drive Backup Notifications"]
+include = [
+    { path = "src/drive_backup/core/notifications/mac/build/Drive Backup Notifications.app/**/*", format = ["sdist", "wheel"] },
+    { path = "src/drive_backup/core/notifications/windows/build/Drive Backup Notifications.exe", format = ["sdist", "wheel"] },
+    { path = "Privacy.md", format = ["sdist"] }
+]
+
+[tool.poetry.urls]
+Issues = "https://github.com/dunkmann00/Drive-Backup/issues"
+
+[tool.poetry.scripts]
+dbackup = "drive_backup.cli:main"
+
+[tool.poetry.dependencies]
+python = ">=3.11,<3.13"
+google-api-python-client = ">=2.122.0"
+google-auth-httplib2 = ">=0.2.0"
+google-auth-oauthlib = ">=1.2.0"
+rich = ">=13.7.1"
+pathvalidate = ">=3.2.0"
+cryptography = ">=42.0.5"
+click = ">=8.1.7"
+drive-backup-credentials = ">=0.2.1"
+
+[tool.poetry.group.dev.dependencies]
+tomlkit = ">=0.12.4"
+pyinstaller = "^6.5.0"
+
+[tool.poetry-plugin-universal2-wheel]
+cache-wheels = true
+
+[tool.poetry-plugin-pin-build]

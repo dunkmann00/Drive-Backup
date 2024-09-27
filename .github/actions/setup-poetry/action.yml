@@ -1,0 +1,18 @@
+name: Setup Poetry
+description: Sets up the Keychain on macOS for codesigning with the given
+  inputs.
+runs:
+  using: composite
+  steps:
+    - name: Install Poetry
+      shell: bash
+      run: |
+        pipx install poetry==1.8.3
+        poetry config virtualenvs.in-project true
+        pipx inject poetry poetry-plugin-export==1.8.0
+        # Handle paths correctly whether on windows or otherwise
+        pipx inject poetry "$(python -c "import pathlib; print( str(pathlib.Path.cwd() / 'poetry-plugins' / 'poetry-plugin-pin-build') )")"
+    - name: Install macOS plugin
+      if: runner.os == 'macOS'
+      shell: bash
+      run: pipx inject poetry "$(python -c "import pathlib; print( str(pathlib.Path.cwd() / 'poetry-plugins' / 'poetry-plugin-universal2-wheel') )")"

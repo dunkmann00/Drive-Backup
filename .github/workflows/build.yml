@@ -1,0 +1,198 @@
+name: Build App
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+  workflow_call:
+    outputs:
+      pypi-artifact-name:
+        description: The name of the artifact containing the python sdist and wheel for pypi.
+        value: ${{ jobs.package-build.outputs.artifact-name }}
+
+env:
+  PYTHONUNBUFFERED: 1
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  notifications-build:
+    uses: ./.github/workflows/notifications.yml
+    secrets: inherit
+
+  package-build:
+    name: Build PyPI Package
+    needs: notifications-build
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        shell: bash
+    env:
+      ARTIFACT_NAME: pypi-package-build
+    outputs:
+      artifact-name: ${{ env.ARTIFACT_NAME }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Python
+        id: python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Set pipx default python
+        env:
+          PIPX_DEFAULT_PYTHON: ${{ steps.python.outputs.python-path }}
+        run: echo "PIPX_DEFAULT_PYTHON=$PIPX_DEFAULT_PYTHON" >> "$GITHUB_ENV"
+      - name: Setup Poetry
+        uses: ./.github/actions/setup-poetry
+      - name: Get notification apps
+        id: download-notifications
+        uses: actions/download-artifact@v4
+        with:
+          path: ${{ runner.temp }}/notifications-artifacts
+          merge-multiple: true
+      - name: Unzip & move notifications apps
+        env:
+          ARTIFACTS_PATH: ${{ steps.download-notifications.outputs.download-path }}
+          MACOS_ARTIFACT_NAME: ${{ needs.notifications-build.outputs.macos-artifact-name }}
+          MACOS_BUILD_PATH: ${{ needs.notifications-build.outputs.macos-build-path }}
+          WINDOWS_ARTIFACT_NAME: ${{ needs.notifications-build.outputs.windows-artifact-name }}
+          WINDOWS_BUILD_PATH: ${{ needs.notifications-build.outputs.windows-posix-build-path }}
+        run: |
+          # macOS Notifications App
+          mkdir "$GITHUB_WORKSPACE/$MACOS_BUILD_PATH"
+          unzip "$ARTIFACTS_PATH/$MACOS_ARTIFACT_NAME.zip" -d "$GITHUB_WORKSPACE/$MACOS_BUILD_PATH"
+
+          # Windows Notifications App
+          mkdir "$GITHUB_WORKSPACE/$WINDOWS_BUILD_PATH"
+          unzip "$ARTIFACTS_PATH/$WINDOWS_ARTIFACT_NAME.zip" -d "$GITHUB_WORKSPACE/$WINDOWS_BUILD_PATH"
+      - name: Build package sdist & wheel
+        run: poetry build
+      - name: Upload package sdist & wheel
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: ./dist
+
+  binary-build:
+    name: Build ${{ matrix.build.os }} App Binary
+    needs: notifications-build
+    runs-on: ${{ matrix.build.os }}
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        build:
+          - os: macos-14
+            notifications:
+              artifact-name: ${{ needs.notifications-build.outputs.macos-artifact-name }}
+              build-path: ./${{ needs.notifications-build.outputs.macos-build-path }}
+          - os: windows-2022
+            notifications:
+              artifact-name: ${{ needs.notifications-build.outputs.windows-artifact-name }}
+              build-path: .\${{ needs.notifications-build.outputs.windows-build-path }}
+          - os: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Python
+        id: python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Set pipx default python
+        env:
+          PIPX_DEFAULT_PYTHON: ${{ steps.python.outputs.python-path }}
+        run: echo "PIPX_DEFAULT_PYTHON=$PIPX_DEFAULT_PYTHON" >> "$GITHUB_ENV"
+      - name: Setup Poetry
+        uses: ./.github/actions/setup-poetry
+      - name: Setup Keychain (macOS)
+        if: runner.os == 'macOS'
+        uses: ./.github/actions/setup-keychain
+        with:
+          macos-certificate: ${{ secrets.PROD_MACOS_CERTIFICATE }}
+          macos-certificate-pwd: ${{ secrets.PROD_MACOS_CERTIFICATE_PWD }}
+          macos-ci-keychain-pwd: ${{ secrets.PROD_MACOS_CI_KEYCHAIN_PWD }}
+      - name: Install Drive Backup package & dependencies
+        run: poetry install
+      - name: Get notification app (macOS & Windows)
+        if: runner.os == 'macOS' || runner.os == 'Windows'
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.build.notifications.artifact-name }}
+          path: ${{ matrix.build.notifications.build-path }}
+      - name: Unzip notification app (macOS & Windows)
+        if: runner.os == 'macOS' || runner.os == 'Windows'
+        env:
+          NOTIFICATION_NAME: ${{ matrix.build.notifications.artifact-name }}
+          NOTIFICATION_BUILD: ${{ matrix.build.notifications.build-path }}
+        run: |
+          ZIP_PATH=$(python -c "import pathlib; print(pathlib.Path(r'$NOTIFICATION_BUILD') / '$NOTIFICATION_NAME.zip')")
+          unzip "$ZIP_PATH" -d "$NOTIFICATION_BUILD"
+      - name: Build app binary
+        env:
+          MACOS_CODESIGN_IDENTITY: ${{ secrets.PROD_MACOS_CERTIFICATE_IDENTITY }}
+        run: poetry run python app_build.py build
+      - name: Notarize app (macOS)
+        if: runner.os == 'macOS'
+        env:
+          MACOS_NOTARIZATION_APPLE_ID: ${{ secrets.PROD_MACOS_NOTARIZATION_APPLE_ID }}
+          MACOS_NOTARIZATION_TEAM_ID: ${{ secrets.PROD_MACOS_NOTARIZATION_TEAM_ID }}
+          MACOS_NOTARIZATION_PWD: ${{ secrets.PROD_MACOS_NOTARIZATION_PWD }}
+        run: |
+          echo "Create Zip Archive"
+          ZIP_PATH="$(poetry run python app_build.py archive --format zip)"
+
+          # Here we send the notarization request to Apple's Notarization service, waiting for the result.
+          # This typically takes a few seconds inside a CI environment, but it might take more depending on the App
+          # characteristics. We pass in all the credentials, including the password so that we can prevent a
+          # UI password dialog from blocking the CI
+
+          echo "Notarize app"
+          xcrun notarytool submit "$ZIP_PATH" \
+            --apple-id "$MACOS_NOTARIZATION_APPLE_ID" \
+            --team-id "$MACOS_NOTARIZATION_TEAM_ID" \
+            --password "$MACOS_NOTARIZATION_PWD" \
+            --wait
+
+          # Remove the zip, we don't need it anymore
+          rm "$ZIP_PATH"
+
+          # This is where we would normally "attach the staple" to our executable. Unfortunately that can't be done at
+          # this time:
+          #
+          #   "Although tickets are created for standalone binaries, it’s not currently possible to staple tickets to them."
+          #   (Source: https://developer.apple.com/documentation/security/notarizing_macos_software_before_distribution/customizing_the_notarization_workflow#3087720)
+          #
+          # This isn't a huge problem because our binary can still be verified on a users machine as long as there is an
+          # internet connection.
+      - name: Move notification app into binary directory (macOS & Windows)
+        if: runner.os == 'macOS' || runner.os == 'Windows'
+        run: poetry run python app_build.py add-notifications
+      - name: Get Archive Name
+        env:
+          RELEVANT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          # Get the project's version
+          VERSION=$(poetry version -s)
+          if [ "$GITHUB_EVENT_NAME" != "release" ]; then
+            VERSION="$VERSION+$(git rev-parse --short $RELEVANT_SHA)"
+          fi
+
+          # Create the archive name and store as an environment varable
+          ARCHIVE_NAME=$(poetry run python app_build.py archive-name --version $VERSION)
+          echo "ARCHIVE_NAME=$ARCHIVE_NAME" >> "$GITHUB_ENV"
+      - name: Archive app
+        run: |
+          # Build the archive and store the path to it
+          ARCHIVE_PATH="$(poetry run python app_build.py archive --archive-name "$ARCHIVE_NAME")"
+
+          # Store the archive path as an environment variable
+          echo "ARCHIVE_PATH=$ARCHIVE_PATH" >> "$GITHUB_ENV"
+      - name: Upload binary archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ARCHIVE_NAME }}
+          path: ${{ env.ARCHIVE_PATH }}

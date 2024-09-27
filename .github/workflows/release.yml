@@ -1,0 +1,47 @@
+name: Release App
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build:
+    uses: ./.github/workflows/build.yml
+    secrets: inherit
+
+  release-pypi:
+    name: Publish on PyPI
+    needs: build
+    runs-on: ubuntu-22.04
+    environment:
+      name: pypi
+      url: https://pypi.org/p/drive-backup
+    permissions:
+      id-token: write
+    steps:
+      - name: Download PyPI artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.build.outputs.pypi-artifact-name }}
+          path: dist
+      - name: Publish sdist and wheel on PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+
+  release-github:
+    name: Upload assets to GitHub Release
+    needs: build
+    runs-on: ubuntu-22.04
+    environment:
+      name: github-release
+      url: ${{ steps.upload-assets.outputs.url }}
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Upload release assets
+        id: upload-assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: !(*Notifications*)

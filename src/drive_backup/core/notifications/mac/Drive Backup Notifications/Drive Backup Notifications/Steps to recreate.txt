@@ -1,0 +1,6 @@
+1) Create a macOS app with interface set to Storyboard
+2) Delete the storyboard and view controller file.
+3) Remove the Main storyboard entry from Info.plist
+4) Set LSUIElement to True in Info.plist
+5) Copy the code from 'main.swift' and 'AppDelegate.swift' into the new project
+6) Set App Icon

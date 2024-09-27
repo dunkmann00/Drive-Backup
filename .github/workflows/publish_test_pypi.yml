@@ -1,0 +1,30 @@
+name: Publish package to TestPyPI
+
+on:
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  build:
+    uses: ./.github/workflows/build.yml
+    secrets: inherit
+
+  publish-test-pypi:
+    name: Publish package to TestPyPI
+    needs: build
+    runs-on: ubuntu-22.04
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/drive-backup
+    permissions:
+      id-token: write
+    steps:
+      - name: Download PyPI artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.build.outputs.pypi-artifact-name }}
+          path: dist
+      - name: Publish sdist and wheel on PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/

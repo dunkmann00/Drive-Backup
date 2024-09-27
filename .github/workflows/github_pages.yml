@@ -1,0 +1,56 @@
+name: Github Pages
+
+on:
+  push:
+  # Runs when a release is published
+  release:
+    types: [released]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow one concurrent deployment
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  # Build & Deploy Job
+  gh_pages:
+    name: Build & Deploy Github Pages
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.gh_pages.outputs.page_url }}
+    env:
+      GHP_SOURCE_DIR: pages
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Prep For Pages
+        run: |
+          # Copy md files into Pages directory
+          cp {README.md,Privacy.md,LICENSE.md} $GHP_SOURCE_DIR
+          # Copy the icon into the images sub-directory
+          cp src/drive_backup/resources/drive-backup-icon.png $GHP_SOURCE_DIR/images
+          # Update the image links in the README
+          sed -i 's#src/drive_backup/resources/drive-backup-icon.png#images/drive-backup-icon.png#g' $GHP_SOURCE_DIR/README.md
+          sed -i 's#pages/images/google-verification-warning.png#images/google-verification-warning.png#g' $GHP_SOURCE_DIR/README.md
+          # Update md links
+          sed -i 's#.md##g' $GHP_SOURCE_DIR/README.md
+          # Copy demo gif into Pages directory
+          mkdir -p $GHP_SOURCE_DIR/asciinema/demo
+          cp asciinema/demo/drive-backup-demo.gif $GHP_SOURCE_DIR/asciinema/demo
+          # Replace demo gif with asciinema player
+          perl -i -0777 -pe 's#<!-- asciinema-start -->(.*)<!-- asciinema-end -->#<script src="https://asciinema.org/a/656228.js" id="asciicast-656228" async="true"></script>#gs' $GHP_SOURCE_DIR/README.md
+      - name: Build & Deploy
+        id: gh_pages
+        uses: dunkmann00/jekyll-v4-gh-pages@v1
+        with:
+          source: ${{ env.GHP_SOURCE_DIR }}

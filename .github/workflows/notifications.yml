@@ -1,0 +1,210 @@
+name: Notifications Build
+
+on:
+  push:
+    paths:
+      - 'src/drive_backup/core/notifications/*/Drive Backup Notifications/**'
+      - '.github/workflows/notifications.yml'
+
+  # Allows this workflow to be called from another workflow
+  workflow_call:
+    outputs:
+      project-name:
+        description: Name of the notification apps (they both use the same name).
+        value: ${{ jobs.mac-notifications.outputs.project-name }}
+      macos-build-path:
+        description: Path to the macOS notification app build directory (relative).
+        value: ${{ jobs.mac-notifications.outputs.build-path }}
+      macos-artifact-name:
+        description: The name of the artifact for the macOS build.
+        value: ${{ jobs.mac-notifications.outputs.artifact-name }}
+      windows-build-path:
+        description: Path to the Windows notification app build directory (relative).
+        value: ${{ jobs.windows-notifications.outputs.build-path }}
+      windows-posix-build-path:
+        description: Posix path to the Windows notification app build directory (relative).
+        value: ${{ jobs.windows-notifications.outputs.posix-build-path }}
+      windows-artifact-name:
+        description: The name of the artifact for the Windows build.
+        value: ${{ jobs.windows-notifications.outputs.artifact-name }}
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+env:
+  PROJECT_NAME: Drive Backup Notifications
+
+jobs:
+  mac-notifications:
+    name: Build macOS Notification App
+    runs-on: macos-14
+    defaults:
+      run:
+        shell: bash
+    env:
+      NOTIFICATION_PROJECT_PATH: src/drive_backup/core/notifications/mac
+    outputs:
+      project-name: ${{ steps.setup-variables.outputs.PROJECT_NAME }}
+      build-path: ${{ steps.setup-variables.outputs.BUILD_PATH }}
+      artifact-name: ${{ steps.setup-variables.outputs.ARTIFACT_NAME }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Xcode
+        # https://github.com/actions/runner-images/blob/main/images/macos/macos-14-arm64-Readme.md#xcode
+        run: sudo xcode-select -s /Applications/Xcode_15.3.app
+      - name: Setup Env Variables
+        id: setup-variables
+        run: |
+          ARTIFACT_NAME="$(echo "$PROJECT_NAME" | tr " " _)-macos"
+          echo "ARTIFACT_NAME=$ARTIFACT_NAME" >> "$GITHUB_ENV"
+
+          BUILD_PATH="$NOTIFICATION_PROJECT_PATH/build"
+          echo "BUILD_PATH=$BUILD_PATH" >> "$GITHUB_ENV"
+          echo "APP_PATH=$BUILD_PATH/$PROJECT_NAME.app" >> "$GITHUB_ENV"
+          echo "ZIP_PATH=$BUILD_PATH/$ARTIFACT_NAME.zip" >> "$GITHUB_ENV"
+
+          echo "PROJECT_NAME=$PROJECT_NAME" >> "$GITHUB_OUTPUT"
+          echo "BUILD_PATH=$BUILD_PATH" >> "$GITHUB_OUTPUT"
+          echo "ARTIFACT_NAME=$ARTIFACT_NAME" >> "$GITHUB_OUTPUT"
+      - name: Get cache key prefix
+        run: |
+          CACHE_KEY_PREFIX="mac-notifications"
+          if [ "$GITHUB_EVENT_NAME" == "release" ]; then
+            $CACHE_KEY_PREFIX="$CACHE_KEY_PREFIX-release"
+          fi
+          echo "CACHE_KEY_PREFIX=$CACHE_KEY_PREFIX" >> "$GITHUB_ENV"
+      - name: Cache macOS Notification App
+        id: cache-mac-app
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/${{ env.ZIP_PATH }}
+          key: ${{ env.CACHE_KEY_PREFIX }}-${{ hashFiles('format("{0}/{1}/{2}", github.workspace, env.NOTIFICATION_PROJECT_PATH, env.PROJECT_NAME)','.github/workflows/notifications.yml','pyproject.toml') }}
+      - name: Setup keychain
+        if: steps.cache-mac-app.outputs.cache-hit != 'true'
+        uses: ./.github/actions/setup-keychain
+        with:
+          macos-certificate: ${{ secrets.PROD_MACOS_CERTIFICATE }}
+          macos-certificate-pwd: ${{ secrets.PROD_MACOS_CERTIFICATE_PWD }}
+          macos-ci-keychain-pwd: ${{ secrets.PROD_MACOS_CI_KEYCHAIN_PWD }}
+      - name: Build Xcode Archive
+        if: steps.cache-mac-app.outputs.cache-hit != 'true'
+        # This was helpful for this step:
+        # https://www.andrewhoog.com/post/how-to-build-an-ios-app-with-github-actions-2023/
+        run: |
+          xcodebuild -disableAutomaticPackageResolution \
+            -project "$GITHUB_WORKSPACE/$NOTIFICATION_PROJECT_PATH/$PROJECT_NAME/$PROJECT_NAME.xcodeproj" \
+            -scheme "$PROJECT_NAME" \
+            -sdk macosx \
+            -destination "generic/platform=macOS" \
+            -archivePath "$GITHUB_WORKSPACE/$BUILD_PATH/$PROJECT_NAME.xcarchive" \
+            clean archive
+      - name: Export Xcode Archive
+        if: steps.cache-mac-app.outputs.cache-hit != 'true'
+        env:
+          EXPORT_OPTIONS_PLIST: ${{ secrets.EXPORT_OPTIONS_PLIST }}
+        run: |
+          EXPORT_OPTIONS_PATH="$RUNNER_TEMP/ExportOptions.plist"
+          echo "$EXPORT_OPTIONS_PLIST" | base64 --decode -o "$EXPORT_OPTIONS_PATH"
+          xcodebuild -exportArchive \
+            -archivePath "$GITHUB_WORKSPACE/$BUILD_PATH/$PROJECT_NAME.xcarchive" \
+            -exportOptionsPlist "$EXPORT_OPTIONS_PATH" \
+            -exportPath "$GITHUB_WORKSPACE/$BUILD_PATH"
+      - name: Notarize App
+        if: steps.cache-mac-app.outputs.cache-hit != 'true'
+        env:
+          MACOS_NOTARIZATION_APPLE_ID: ${{ secrets.PROD_MACOS_NOTARIZATION_APPLE_ID }}
+          MACOS_NOTARIZATION_TEAM_ID: ${{ secrets.PROD_MACOS_NOTARIZATION_TEAM_ID }}
+          MACOS_NOTARIZATION_PWD: ${{ secrets.PROD_MACOS_NOTARIZATION_PWD }}
+        run: |
+          echo "Create Zip Archive"
+          ditto -c -k --keepParent "$GITHUB_WORKSPACE/$APP_PATH" "$GITHUB_WORKSPACE/$ZIP_PATH"
+
+          # Here we send the notarization request to Apple's Notarization service, waiting for the result.
+          # This typically takes a few seconds inside a CI environment, but it might take more depending on the App
+          # characteristics. We pass in all the credentials, including the password so that we can prevent a
+          # UI password dialog from blocking the CI
+
+          echo "Notarize app"
+          xcrun notarytool submit "$GITHUB_WORKSPACE/$ZIP_PATH" \
+            --apple-id "$MACOS_NOTARIZATION_APPLE_ID" \
+            --team-id "$MACOS_NOTARIZATION_TEAM_ID" \
+            --password "$MACOS_NOTARIZATION_PWD" \
+            --wait
+
+          # Finally, we need to "attach the staple" to our executable, which will allow our app to be
+          # validated by macOS even when an internet connection is not available.
+          echo "Attach staple"
+          xcrun stapler staple "$GITHUB_WORKSPACE/$APP_PATH"
+      - name: Zip App Bundle
+        if: steps.cache-mac-app.outputs.cache-hit != 'true'
+        run: |
+          # We need to Zip the app again to upload the stapled version as an artifact.
+          rm "$GITHUB_WORKSPACE/$ZIP_PATH"
+          ditto -c -k --keepParent "$GITHUB_WORKSPACE/$APP_PATH" "$GITHUB_WORKSPACE/$ZIP_PATH"
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: "${{ env.ARTIFACT_NAME }}"
+          path: "${{ github.workspace }}/${{ env.ZIP_PATH }}"
+
+  windows-notifications:
+    name: Build Windows Notification App
+    runs-on: windows-2022
+    env:
+      NOTIFICATION_PROJECT_PATH: src\drive_backup\core\notifications\windows
+    outputs:
+      build-path: ${{ steps.setup-variables.outputs.BUILD_PATH }}
+      posix-build-path: ${{ steps.setup-variables.outputs.POSIX_BUILD_PATH }}
+      artifact-name: ${{ steps.setup-variables.outputs.ARTIFACT_NAME }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+      - name: Setup Env Variables
+        id: setup-variables
+        run: |
+          $ARTIFACT_NAME=$env:PROJECT_NAME.Replace(" ","_") + "-windows"
+          echo "ARTIFACT_NAME=$ARTIFACT_NAME" >> "$env:GITHUB_ENV"
+
+          $BUILD_PATH="$env:NOTIFICATION_PROJECT_PATH\build"
+          echo "BUILD_PATH=$BUILD_PATH" >> "$env:GITHUB_ENV"
+          echo "EXE_PATH=$BUILD_PATH\$env:PROJECT_NAME.exe" >> "$env:GITHUB_ENV"
+          echo "ZIP_PATH=$BUILD_PATH\$ARTIFACT_NAME.zip" >> "$env:GITHUB_ENV"
+
+          $POSIX_BUILD_PATH=python -c "import pathlib; print( pathlib.Path(r'$BUILD_PATH').as_posix() )"
+
+          echo "BUILD_PATH=$BUILD_PATH" >> "$env:GITHUB_OUTPUT"
+          echo "POSIX_BUILD_PATH=$POSIX_BUILD_PATH" >> "$env:GITHUB_OUTPUT"
+          echo "ARTIFACT_NAME=$ARTIFACT_NAME" >> "$env:GITHUB_OUTPUT"
+      - name: Get cache key prefix
+        run: |
+          $CACHE_KEY_PREFIX="windows-notifications"
+          if ("$env:GITHUB_EVENT_NAME" -eq "release") {
+            $CACHE_KEY_PREFIX=$CACHE_KEY_PREFIX + "-release"
+          }
+          echo "CACHE_KEY_PREFIX=$CACHE_KEY_PREFIX" >> "$env:GITHUB_ENV"
+      - name: Cache Windows Notification App
+        id: cache-windows-app
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/${{ env.ZIP_PATH }}
+          key: ${{ env.CACHE_KEY_PREFIX }}-${{ hashFiles('format("{0}\{1}\{2}", github.workspace, env.NOTIFICATION_PROJECT_PATH, env.PROJECT_NAME)','.github\workflows\notifications.yml','pyproject.toml') }}
+      - name: Build VS Project
+        if: steps.cache-windows-app.outputs.cache-hit != 'true'
+        run: |
+          msbuild "$env:GITHUB_WORKSPACE\$env:NOTIFICATION_PROJECT_PATH\$env:PROJECT_NAME\$env:PROJECT_NAME.vcxproj" `
+            -t:rebuild `
+            -verbosity:diag `
+            -property:Configuration=Release `
+            -property:Platform=x64 `
+            -property:OutDir="$env:GITHUB_WORKSPACE\$env:BUILD_PATH\"
+      - name: Zip App
+        if: steps.cache-windows-app.outputs.cache-hit != 'true'
+        run: Compress-Archive -Path "$env:GITHUB_WORKSPACE\$env:EXE_PATH" -DestinationPath "$env:GITHUB_WORKSPACE\$env:ZIP_PATH"
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: "${{ env.ARTIFACT_NAME }}"
+          path: "${{ github.workspace }}\\${{ env.ZIP_PATH }}"

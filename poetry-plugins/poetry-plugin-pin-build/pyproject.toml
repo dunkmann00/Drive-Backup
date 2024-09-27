@@ -1,0 +1,17 @@
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "poetry-plugin-pin-build"
+version = "0.1.0"
+authors = ["George Waters <gwatersdev@gmail.com>"]
+description = "Uses lockfile to set pinned dependencies in builds."
+
+[tool.poetry.dependencies]
+python = ">=3.7"
+poetry = ">=1.8"
+poetry-plugin-export = ">=1.7"
+
+[tool.poetry.plugins."poetry.application.plugin"]
+universal2 = "poetry_plugin_pin_build:PinBuildPlugin"
