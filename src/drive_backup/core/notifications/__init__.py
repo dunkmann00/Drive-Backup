@@ -31,7 +31,7 @@ def get_macos_notification_authorization():
     already_prompted = prompted_path.is_file()
     if already_prompted:
         return
-    prompted_path.parent.mkdir()
+    prompted_path.parent.mkdir(exist_ok=True)
     prompted_path.touch()
     console.print(
         "[bold]Drive Backup[/] will trigger a notification to let you know when a backup has completed or failed. "
@@ -41,7 +41,7 @@ def get_macos_notification_authorization():
     )
     try:
         mac_drive_notification = resources.files("drive_backup.core.notifications") / "mac" / "build" / "Drive Backup Notifications.app" / "Contents" / "MacOS" / "Drive Backup Notifications"
-        subprocess.run([mac_drive_notification, "-authorization"])
+        subprocess.run([mac_drive_notification, "--authorization"])
     except FileNotFoundError:
         logger = logging.getLogger(__name__)
         logger.info("Notification executable not found, unable to get notification authorization.")
