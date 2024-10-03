@@ -1,2 +1,2 @@
-"src/drive_backup/core/notifications/windows/Drive[[:space:]]Backup[[:space:]]Notifications/Drive[[:space:]]Backup[[:space:]]Notifications/wintoastlib.h" linguist-detectable=false
-"src/drive_backup/core/notifications/windows/Drive[[:space:]]Backup[[:space:]]Notifications/Drive[[:space:]]Backup[[:space:]]Notifications/wintoastlib.cpp" linguist-detectable=false
+src/drive_backup/core/notifications/windows/Drive[[:space:]]Backup[[:space:]]Notifications/Drive[[:space:]]Backup[[:space:]]Notifications/wintoastlib.h linguist-detectable=false
+src/drive_backup/core/notifications/windows/Drive[[:space:]]Backup[[:space:]]Notifications/Drive[[:space:]]Backup[[:space:]]Notifications/wintoastlib.cpp linguist-detectable=false
