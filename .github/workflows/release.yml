@@ -51,11 +51,12 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: dist
-          pattern: "!(*Notifications*)"
           merge-multiple: true
       - name: Upload release assets
         id: upload-assets
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/*
+          files: |
+            dist/drive_backup-*
+            dist/Drive_Backup-*
           tag_name: ${{ inputs.tag_name }}
