@@ -11,6 +11,9 @@ on:
         required: true
         default: false
         type: boolean
+      tag_name:
+        required: true
+        type: string
 
 jobs:
   build:
