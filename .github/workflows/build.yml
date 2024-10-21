@@ -177,7 +177,7 @@ jobs:
         run: |
           # Get the project's version
           VERSION=$(poetry version -s)
-          if [ "$GITHUB_EVENT_NAME" != "release" ]; then
+          if [[ "$GITHUB_EVENT_NAME" != "release" && "$GITHUB_EVENT_NAME" != "workflow_dispatch" ]]; then
             VERSION="$VERSION+$(git rev-parse --short $RELEVANT_SHA)"
           fi
 
