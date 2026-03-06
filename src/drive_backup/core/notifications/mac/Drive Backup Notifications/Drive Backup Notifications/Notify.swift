@@ -13,6 +13,12 @@ struct Notify: AsyncParsableCommand {
     @Flag(name: .shortAndLong, help: "Request authorization to allow notifications and exit.")
     var authorization = false
     
+    @Flag(name: .shortAndLong, help: "Show the notification.")
+    var show = false
+    
+    @Flag(name: .shortAndLong, help: "Print out the notification.")
+    var verbose = false
+    
     @Option(name: .shortAndLong, help: "The title to use for the notification.")
     var title = "Drive Backup Notifications"
     
@@ -47,12 +53,16 @@ struct Notify: AsyncParsableCommand {
         content.body = self.body
         content.sound = UNNotificationSound.default
         
-        let request = UNNotificationRequest(identifier: "com.geoh2os8295.Drive-Backup-Notifications", content: content, trigger: nil)
+        if self.verbose {
+            print("Drive Backup Notification:\n\n\(self.title)\n\(self.body)\n")
+        }
         
-        try? await center.add(request)
+        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
         
-        try? await Task.sleep(nanoseconds: 15_000_000_000)
-        
-        center.removeAllDeliveredNotifications()
+        if self.show {
+            try? await center.add(request)
+        }else if self.verbose {
+            print("Not showing notification (--show not present).")
+        }
     }
 }
