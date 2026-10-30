@@ -14,7 +14,7 @@ def show_notification(title, body, image=None):
             subprocess.Popen([win_drive_notification, "--title", title, "--body", body, "--image", image])
         elif platform.system() == "Darwin":
             mac_drive_notification = notification_dir / "mac" / "build" / "Drive Backup Notifications.app" / "Contents" / "MacOS" / "Drive Backup Notifications"
-            subprocess.Popen([mac_drive_notification, "--title", title, "--body", body])
+            subprocess.Popen([mac_drive_notification, "--title", title, "--body", body, "--show"])
     except FileNotFoundError:
         logger = logging.getLogger(__name__)
         logger.info("Notification executable not found, unable to show notification.")
